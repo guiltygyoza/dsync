@@ -41,9 +41,9 @@ export const EthereumProvider: React.FC<EthereumProviderProps> = ({ children }) 
       
       try {
         // Get accounts
-        const accounts = await window.ethereum?.request({ method: 'eth_accounts' });
+        const accounts = await window.ethereum?.request({ method: 'eth_accounts' }) as string[];
         
-        if (accounts.length > 0) {
+        if (accounts && accounts.length > 0) {
           const provider = new BrowserProvider(window.ethereum!);
           const signer = await provider.getSigner();
           const address = await signer.getAddress();
@@ -94,7 +94,12 @@ export const EthereumProvider: React.FC<EthereumProviderProps> = ({ children }) 
 
     try {
       // Request accounts
-      await window.ethereum?.request({ method: 'eth_requestAccounts' });
+      const accounts = await window.ethereum?.request({ method: 'eth_requestAccounts' }) as string[];
+      
+      if (!accounts || accounts.length === 0) {
+        console.error('No accounts returned after connection request');
+        return;
+      }
       
       const provider = new BrowserProvider(window.ethereum!);
       const signer = await provider.getSigner();
@@ -142,15 +147,30 @@ export const EthereumProvider: React.FC<EthereumProviderProps> = ({ children }) 
 };
 
 // Hook to use the Ethereum context
+// eslint-disable-next-line react-refresh/only-export-components
 export const useEthereum = () => useContext(EthereumContext);
+
+// Define Ethereum provider event types
+type EthereumEventMap = {
+  accountsChanged: string[];
+  chainChanged: string;
+  connect: { chainId: string };
+  disconnect: { code: number; message: string };
+};
 
 // Add TypeScript interface for window.ethereum
 declare global {
   interface Window {
     ethereum?: {
-      request: (args: { method: string; params?: any[] }) => Promise<any>;
-      on: (event: string, callback: (...args: any[]) => void) => void;
-      removeListener: (event: string, callback: (...args: any[]) => void) => void;
+      request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+      on<K extends keyof EthereumEventMap>(
+        event: K,
+        callback: (result: EthereumEventMap[K]) => void
+      ): void;
+      removeListener<K extends keyof EthereumEventMap>(
+        event: K,
+        callback: (result: EthereumEventMap[K]) => void
+      ): void;
     };
   }
 }
