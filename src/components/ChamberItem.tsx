@@ -1,4 +1,3 @@
-import React from 'react';
 import type { Chamber } from '../replicache/types';
 import { Link } from 'react-router-dom';
 

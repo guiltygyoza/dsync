@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import { useCallback } from 'react';
 import { useReplicache } from '../replicache/ReplicacheContext';
 import { useSubscribe } from '../hooks/useReplicacheSubscribe';
 import type { Chamber } from '../replicache/types';

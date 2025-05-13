@@ -1,4 +1,3 @@
-import React from 'react';
 import ChamberDetail from '../components/ChamberDetail';
 import CommentList from '../components/CommentList';
 import CreateCommentForm from '../components/CreateCommentForm';

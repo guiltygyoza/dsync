@@ -1,4 +1,3 @@
-import React from 'react';
 import CreateChamberForm from '../components/CreateChamberForm';
 
 function CreateChamberPage() {

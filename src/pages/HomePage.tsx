@@ -1,4 +1,3 @@
-import React from 'react';
 import ChamberList from '../components/ChamberList';
 
 function HomePage() {
