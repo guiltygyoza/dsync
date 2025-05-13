@@ -1,35 +1,48 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useEffect, useState } from 'react';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import Navbar from './components/Navbar';
+import HomePage from './pages/HomePage';
+import ChamberPage from './pages/ChamberPage';
+import CreateChamberPage from './pages/CreateChamberPage';
+import { ReplicacheProvider } from './replicache/ReplicacheContext';
+import { nanoid } from 'nanoid';
 
-function App() {
-  const [count, setCount] = useState(0)
+const USER_ID_KEY = 'replicache-user-id';
 
-  return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+function getLocalUserId(): string {
+  let userId = localStorage.getItem(USER_ID_KEY);
+  if (!userId) {
+    userId = nanoid();
+    localStorage.setItem(USER_ID_KEY, userId);
+  }
+  return userId;
 }
 
-export default App
+function App() {
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setUserId(getLocalUserId());
+  }, []);
+
+  if (!userId) {
+    return <div>Loading user identity...</div>;
+  }
+
+  return (
+    <ReplicacheProvider userId={userId}>
+      <Router>
+        <Navbar />
+        <main style={{ padding: '0 20px' }}>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/chamber/new" element={<CreateChamberPage />} />
+            <Route path="/chamber/:chamberId" element={<ChamberPage />} />
+          </Routes>
+        </main>
+      </Router>
+    </ReplicacheProvider>
+  );
+}
+
+export default App;
