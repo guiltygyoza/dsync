@@ -1,10 +1,10 @@
 import { useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { useReplicache } from '../replicache/ReplicacheContext';
-import { useSubscribe } from '../hooks/useReplicacheSubscribe';
 import type { Comment } from '../replicache/types';
 import CommentItem from './CommentItem';
 import type { ReadTransaction } from 'replicache';
+import { useReplicacheSubscribe } from '../hooks/useReplicacheSubscribe';
 
 function CommentList() {
     const { chamberId } = useParams<{ chamberId: string }>();
@@ -20,7 +20,7 @@ function CommentList() {
         return list;
     }, [chamberId]);
 
-    const comments = useSubscribe(
+    const comments = useReplicacheSubscribe(
         rep,
         commentQuery,
         {

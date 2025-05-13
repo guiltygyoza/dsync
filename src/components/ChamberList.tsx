@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { useReplicache } from '../replicache/ReplicacheContext';
-import { useSubscribe } from '../hooks/useReplicacheSubscribe';
+import { useReplicacheSubscribe } from '../hooks/useReplicacheSubscribe';
 import type { Chamber } from '../replicache/types';
 import { Link } from 'react-router-dom';
 import ChamberItem from './ChamberItem';
@@ -15,7 +15,7 @@ function ChamberList() {
         return list;
     }, []);
 
-    const chambers = useSubscribe(
+    const chambers = useReplicacheSubscribe(
         rep,
         chamberQuery,
         {

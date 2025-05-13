@@ -48,7 +48,7 @@ export type UseSubscribeOptions<QueryRet, Default> = {
  * render. If you want to re-run the query when these change, you can pass
  * them as dependencies.
  */
-export function useSubscribe<Tx, QueryRet, Default = undefined>(
+export function useReplicacheSubscribe<Tx, QueryRet, Default = undefined>(
   r: Subscribable<Tx> | null | undefined,
   query: (tx: Tx) => Promise<QueryRet>,
   options: UseSubscribeOptions<QueryRet, Default> = {},
@@ -77,6 +77,7 @@ export function useSubscribe<Tx, QueryRet, Default = undefined>(
       unsubscribe();
       setSnapshot(undefined);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [r, ...dependencies]);
   if (snapshot === undefined) {
     return def as Default;

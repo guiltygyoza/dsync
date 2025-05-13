@@ -2,17 +2,17 @@ import React, { createContext, useContext, useMemo, type ReactNode } from 'react
 import { Replicache } from 'replicache';
 import { getReplicacheClient, type AppMutators } from './client';
 
-interface ReplicacheContextType {
+export interface ReplicacheContextType {
     rep: Replicache<AppMutators> | null;
     userId: string | null;
 }
 
-const ReplicacheContext = createContext<ReplicacheContextType>({ rep: null, userId: null });
-
-interface ReplicacheProviderProps {
+export interface ReplicacheProviderProps {
     children: ReactNode;
     userId: string;
 }
+
+const ReplicacheContext = createContext<ReplicacheContextType>({ rep: null, userId: null });
 
 export const ReplicacheProvider: React.FC<ReplicacheProviderProps> = ({ children, userId }) => {
     const rep = useMemo(() => {
@@ -32,11 +32,12 @@ export const ReplicacheProvider: React.FC<ReplicacheProviderProps> = ({ children
     );
 };
 
+
 // Create a hook to use the context, returning the typed value
 export const useReplicache = (): ReplicacheContextType => {
-    const context = useContext(ReplicacheContext);
-    if (context === undefined) {
-        throw new Error('useReplicache must be used within a ReplicacheProvider');
-    }
-    return context;
+  const context = useContext(ReplicacheContext);
+  if (context === undefined) {
+      throw new Error('useReplicache must be used within a ReplicacheProvider');
+  }
+  return context;
 }; 

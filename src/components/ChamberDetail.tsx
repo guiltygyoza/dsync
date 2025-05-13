@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { useReplicache } from '../replicache/ReplicacheContext';
-import { useSubscribe } from '../hooks/useReplicacheSubscribe';
+import { useReplicacheSubscribe } from '../hooks/useReplicacheSubscribe';
 import type { Chamber } from '../replicache/types';
 import type { ReadTransaction } from 'replicache';
 
@@ -14,7 +14,7 @@ function ChamberDetail() {
         return await tx.get<Chamber>(`chamber/${chamberId}`);
     }, [chamberId]);
 
-    const chamber = useSubscribe(
+    const chamber = useReplicacheSubscribe(
         rep,
         chamberQuery,
         {
