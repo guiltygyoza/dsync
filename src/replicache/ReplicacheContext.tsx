@@ -37,6 +37,7 @@ export const ReplicacheProvider: React.FC<ReplicacheProviderProps> = ({ children
                 'VITE_REPLICACHE_LICENSE_KEY is not set in .env. Replicache will not sync.'
             );
         }
+
         return getReplicacheClient(effectiveUserId);
     }, [effectiveUserId]);
 

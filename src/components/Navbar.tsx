@@ -1,8 +1,9 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router-dom'; // Import Link
 import { useEthereum } from '../ethereum/EthereumContext';
 
 function Navbar() {
+  // Basic navbar structure with links
   const { isConnected, address, ensName, connect, disconnect } = useEthereum();
   
   // Format address for display
@@ -46,7 +47,7 @@ function Navbar() {
 // Basic inline styles for the navbar
 const styles: { [key: string]: React.CSSProperties } = {
   navbar: {
-    background: '#333',
+    background: '#333', // Darker background
     padding: '10px 20px', 
     marginBottom: '20px',
     display: 'flex',

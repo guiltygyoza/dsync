@@ -45,6 +45,18 @@ function App() {
         </Router>
       </ReplicacheProvider>
     </EthereumProvider>
+    <ReplicacheProvider userId={userId}>
+      <Router>
+        <Navbar />
+        <main style={{ padding: '0 20px' }}>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/chamber/new" element={<CreateChamberPage />} />
+            <Route path="/chamber/:chamberId" element={<ChamberPage />} />
+          </Routes>
+        </main>
+      </Router>
+    </ReplicacheProvider>
   );
 }
 
