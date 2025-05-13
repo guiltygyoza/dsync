@@ -34,6 +34,7 @@ export const ReplicacheProvider: React.FC<ReplicacheProviderProps> = ({ children
 
 
 // Create a hook to use the context, returning the typed value
+// eslint-disable-next-line react-refresh/only-export-components
 export const useReplicache = (): ReplicacheContextType => {
   const context = useContext(ReplicacheContext);
   if (context === undefined) {
