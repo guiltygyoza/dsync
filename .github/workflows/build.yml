@@ -1,0 +1,21 @@
+name: Build
+on:
+    push:
+        branches: [main]
+    pull_request:
+        branches: [main]
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        timeout-minutes: 10
+        steps:
+            - uses: actions/checkout@v4
+            - uses: pnpm/action-setup@v4
+              with:
+                  version: 9
+            - shell: bash
+              run: |
+                  pnpm install --no-frozen-lockfile
+
+            - shell: bash
+              run: pnpm build
