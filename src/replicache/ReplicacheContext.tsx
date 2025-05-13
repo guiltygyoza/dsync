@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useMemo, type ReactNode } from 'react';
+import React, { createContext, useContext, useMemo, useEffect, useState, type ReactNode } from 'react';
 import { Replicache } from 'replicache';
 import { getReplicacheClient, type AppMutators } from './client';
+import { useEthereum } from '../ethereum/EthereumContext';
 
 export interface ReplicacheContextType {
     rep: Replicache<AppMutators> | null;
@@ -14,19 +15,33 @@ export interface ReplicacheProviderProps {
 
 const ReplicacheContext = createContext<ReplicacheContextType>({ rep: null, userId: null });
 
-export const ReplicacheProvider: React.FC<ReplicacheProviderProps> = ({ children, userId }) => {
+export const ReplicacheProvider: React.FC<ReplicacheProviderProps> = ({ children, userId: initialUserId }) => {
+    const { isConnected, address } = useEthereum();
+    const [effectiveUserId, setEffectiveUserId] = useState<string>(initialUserId);
+    
+    // Update the effective user ID when Ethereum connection changes
+    useEffect(() => {
+        if (isConnected && address) {
+            // Use Ethereum address as the user ID when connected
+            setEffectiveUserId(address);
+        } else {
+            // Fall back to the initial user ID when not connected
+            setEffectiveUserId(initialUserId);
+        }
+    }, [isConnected, address, initialUserId]);
+
     const rep = useMemo(() => {
-        if (!userId) return null;
+        if (!effectiveUserId) return null;
         if (!import.meta.env.VITE_REPLICACHE_LICENSE_KEY) {
             console.warn(
                 'VITE_REPLICACHE_LICENSE_KEY is not set in .env. Replicache will not sync.'
             );
         }
-        return getReplicacheClient(userId);
-    }, [userId]);
+        return getReplicacheClient(effectiveUserId);
+    }, [effectiveUserId]);
 
     return (
-        <ReplicacheContext.Provider value={{ rep, userId }}>
+        <ReplicacheContext.Provider value={{ rep, userId: effectiveUserId }}>
             {children}
         </ReplicacheContext.Provider>
     );

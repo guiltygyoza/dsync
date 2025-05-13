@@ -5,6 +5,7 @@ import HomePage from './pages/HomePage';
 import ChamberPage from './pages/ChamberPage';
 import CreateChamberPage from './pages/CreateChamberPage';
 import { ReplicacheProvider } from './replicache/ReplicacheContext';
+import { EthereumProvider } from './ethereum/EthereumContext';
 import { nanoid } from 'nanoid';
 
 const USER_ID_KEY = 'replicache-user-id';
@@ -30,18 +31,20 @@ function App() {
   }
 
   return (
-    <ReplicacheProvider userId={userId}>
-      <Router>
-        <Navbar />
-        <main style={{ padding: '0 20px' }}>
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/chamber/new" element={<CreateChamberPage />} />
-            <Route path="/chamber/:chamberId" element={<ChamberPage />} />
-          </Routes>
-        </main>
-      </Router>
-    </ReplicacheProvider>
+    <EthereumProvider>
+      <ReplicacheProvider userId={userId}>
+        <Router>
+          <Navbar />
+          <main style={{ padding: '0 20px' }}>
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/chamber/new" element={<CreateChamberPage />} />
+              <Route path="/chamber/:chamberId" element={<ChamberPage />} />
+            </Routes>
+          </main>
+        </Router>
+      </ReplicacheProvider>
+    </EthereumProvider>
   );
 }
 
