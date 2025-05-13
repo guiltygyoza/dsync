@@ -3,6 +3,12 @@
 ## Using Replicache
 Follow https://doc.replicache.dev/concepts/licensing to get a license key. Create a `.env` and put the key under the variable `VITE_REPLICACHE_LICENSE_KEY`.
 
+## Quick start
+```
+npm install
+npm run dev
+```
+
 ## React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
