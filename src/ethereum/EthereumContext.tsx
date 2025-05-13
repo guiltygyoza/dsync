@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { BrowserProvider, JsonRpcSigner } from 'ethers';
 
 interface EthereumContextType {
@@ -41,10 +41,10 @@ export const EthereumProvider: React.FC<EthereumProviderProps> = ({ children }) 
       
       try {
         // Get accounts
-        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+        const accounts = await window.ethereum?.request({ method: 'eth_accounts' });
         
         if (accounts.length > 0) {
-          const provider = new BrowserProvider(window.ethereum);
+          const provider = new BrowserProvider(window.ethereum!);
           const signer = await provider.getSigner();
           const address = await signer.getAddress();
           
@@ -70,7 +70,7 @@ export const EthereumProvider: React.FC<EthereumProviderProps> = ({ children }) 
 
     // Listen for account changes
     if (isMetaMaskInstalled()) {
-      window.ethereum.on('accountsChanged', (accounts: string[]) => {
+      window.ethereum!.on('accountsChanged', (accounts: string[]) => {
         if (accounts.length === 0) {
           // User disconnected
           setIsConnected(false);
@@ -94,9 +94,9 @@ export const EthereumProvider: React.FC<EthereumProviderProps> = ({ children }) 
 
     try {
       // Request accounts
-      await window.ethereum.request({ method: 'eth_requestAccounts' });
+      await window.ethereum?.request({ method: 'eth_requestAccounts' });
       
-      const provider = new BrowserProvider(window.ethereum);
+      const provider = new BrowserProvider(window.ethereum!);
       const signer = await provider.getSigner();
       const address = await signer.getAddress();
       
