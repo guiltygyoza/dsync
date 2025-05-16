@@ -33,7 +33,16 @@ const Navbar: React.FC<NavbarProps> = ({ theme, toggleTheme }) => {
 	return (
 		// The <nav> element will be styled by .light-mode nav / .dark-mode nav in index.css
 		<nav style={styles.navbarBase}>
-			<Link to="/" style={{ ...styles.brand, textDecoration: "none", color: "inherit", display: "flex", alignItems: "center" }}>
+			<Link
+				to="/"
+				style={{
+					...styles.brand,
+					textDecoration: "none",
+					color: "inherit",
+					display: "flex",
+					alignItems: "center",
+				}}
+			>
 				<img src="/eth-icon.png" alt="Ethereum" style={styles.ethIcon} />
 				Ethereum Congress
 			</Link>
