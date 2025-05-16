@@ -7,6 +7,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   box-sizing: border-box;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 :root {
@@ -29,6 +30,7 @@ a {
   color: #646cff;
   text-decoration: inherit;
 }
+
 a:hover {
   color: #535bf2;
 }
@@ -49,9 +51,11 @@ button {
   cursor: pointer;
   transition: border-color 0.25s;
 }
+
 button:hover {
   border-color: #646cff;
 }
+
 button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
@@ -62,10 +66,75 @@ button:focus-visible {
     color: #213547;
     background-color: #ffffff;
   }
+
   a:hover {
     color: #747bff;
   }
+
   button {
     background-color: #f9f9f9;
   }
+}
+
+/* Light mode (default) */
+body.light-mode {
+  background-color: #ffffff;
+  color: #282c34;
+}
+
+.light-mode nav {
+  background-color: #f0f0f0;
+  /* Lighter navbar for light mode */
+  color: #282c34;
+}
+
+.light-mode nav a,
+.light-mode .walletAddress {
+  color: #282c34;
+}
+
+.light-mode li {
+  border-color: #ccc;
+}
+
+/* Dark mode */
+body.dark-mode {
+  background-color: #282c34;
+  color: #ffffff;
+}
+
+.dark-mode nav {
+  background-color: #1a1a1a;
+  /* Darker navbar for dark mode */
+  color: #ffffff;
+}
+
+.dark-mode nav a,
+.dark-mode .walletAddress {
+  color: #ffffff;
+}
+
+.dark-mode li {
+  border-color: #555;
+}
+
+.dark-mode button {
+  /* Add general dark mode button styles if needed, or style specific buttons */
+}
+
+.dark-mode input,
+.dark-mode textarea {
+  background-color: #333;
+  color: #fff;
+  border: 1px solid #555;
+}
+
+.dark-mode input::placeholder,
+.dark-mode textarea::placeholder {
+  color: #aaa;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
 }
