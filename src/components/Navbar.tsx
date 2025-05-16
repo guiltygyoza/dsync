@@ -33,8 +33,9 @@ const Navbar: React.FC<NavbarProps> = ({ theme, toggleTheme }) => {
 	return (
 		// The <nav> element will be styled by .light-mode nav / .dark-mode nav in index.css
 		<nav style={styles.navbarBase}>
-			<Link to="/" style={{ ...styles.brand, textDecoration: "none", color: "inherit" }}>
-				Improvement Chambers
+			<Link to="/" style={{ ...styles.brand, textDecoration: "none", color: "inherit", display: "flex", alignItems: "center" }}>
+				<img src="/eth-icon.png" alt="Ethereum" style={styles.ethIcon} />
+				Ethereum Congress
 			</Link>
 			<div style={styles.linksContainer}>
 				{/* Links will inherit color from nav due to removal of inline color in styles.link */}
@@ -134,6 +135,11 @@ const styles: { [key: string]: React.CSSProperties } = {
 		// background and color are now inherited or controlled by index.css
 		padding: "6px 10px",
 		borderRadius: "4px",
+	},
+	ethIcon: {
+		width: "24px",
+		height: "24px",
+		marginRight: "8px",
 	},
 };
 
