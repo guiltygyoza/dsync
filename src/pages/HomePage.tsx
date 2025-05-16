@@ -51,7 +51,7 @@ const HomePage: React.FC = () => {
 
 	return (
 		<div>
-			<h1>EIP Categories</h1>
+			<h1>Ethereum Improvement Proposals</h1>
 			{categorizedEIPs.length === 0 ? (
 				<p>Loading EIPs or no EIPs available...</p>
 			) : (
