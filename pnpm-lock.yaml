@@ -8,12 +8,63 @@ importers:
 
   .:
     dependencies:
+      '@chainsafe/libp2p-gossipsub':
+        specifier: ^14.1.1
+        version: 14.1.1
+      '@chainsafe/libp2p-noise':
+        specifier: ^16.1.3
+        version: 16.1.3
+      '@chainsafe/libp2p-yamux':
+        specifier: ^7.0.1
+        version: 7.0.1
+      '@helia/delegated-routing-v1-http-api-client':
+        specifier: ^4.2.5
+        version: 4.2.5
+      '@helia/routers':
+        specifier: ^3.1.1
+        version: 3.1.1
       '@helia/unixfs':
         specifier: ^5.0.2
         version: 5.0.2
+      '@libp2p/autonat':
+        specifier: ^2.0.30
+        version: 2.0.30
+      '@libp2p/bootstrap':
+        specifier: ^11.0.35
+        version: 11.0.35
+      '@libp2p/circuit-relay-v2':
+        specifier: ^3.2.11
+        version: 3.2.11
+      '@libp2p/dcutr':
+        specifier: ^2.0.29
+        version: 2.0.29
+      '@libp2p/identify':
+        specifier: ^3.0.29
+        version: 3.0.29
       '@libp2p/interface':
         specifier: ^2.9.0
         version: 2.9.0
+      '@libp2p/kad-dht':
+        specifier: ^15.0.2
+        version: 15.0.2
+      '@libp2p/mdns':
+        specifier: ^11.0.35
+        version: 11.0.35
+      '@libp2p/ping':
+        specifier: ^2.0.29
+        version: 2.0.29
+      '@libp2p/tls':
+        specifier: ^2.2.0
+        version: 2.2.0
+      '@libp2p/upnp-nat':
+        specifier: ^3.1.13
+        version: 3.1.13
+      '@libp2p/webrtc':
+        specifier: ^5.2.12
+        version: 5.2.12(react-native@0.79.2(@babel/core@7.27.1)(@types/react@19.1.4)(bufferutil@4.0.9)(react@19.1.0)(utf-8-validate@5.0.10))
+      '@libp2p/websockets':
+        specifier: ^9.2.10
+        version: 9.2.10(bufferutil@4.0.9)(utf-8-validate@5.0.10)
       '@orbitdb/core':
         specifier: ^2.5.0
         version: 2.5.0
@@ -23,6 +74,12 @@ importers:
       helia:
         specifier: ^5.4.1
         version: 5.4.1(bufferutil@4.0.9)(react-native@0.79.2(@babel/core@7.27.1)(@types/react@19.1.4)(bufferutil@4.0.9)(react@19.1.0)(utf-8-validate@5.0.10))(utf-8-validate@5.0.10)
+      ipns:
+        specifier: ^10.0.2
+        version: 10.0.2
+      libp2p:
+        specifier: ^2.8.5
+        version: 2.8.5
       nanoid:
         specifier: ^5.1.5
         version: 5.1.5
@@ -283,6 +340,10 @@ packages:
 
   '@chainsafe/is-ip@2.1.0':
     resolution: {integrity: sha512-KIjt+6IfysQ4GCv66xihEitBjvhU/bixbbbFxdJ1sqCp4uJ0wuZiYBPhksZoy4lfaF0k9cwNzY5upEW/VWdw3w==}
+
+  '@chainsafe/libp2p-gossipsub@14.1.1':
+    resolution: {integrity: sha512-EUs2C+xHXXbw0pQQF2AN/ih4qB6BBWOGkDhvHz1VN52o2m/827IBEMT8RHdXMNZciQc90to1L57BKmhXkvztDw==}
+    engines: {npm: '>=8.7.0'}
 
   '@chainsafe/libp2p-noise@16.1.3':
     resolution: {integrity: sha512-YLonKdIUFk/0keKRfzlmdrsObi8r0EaZC14Vjh3qdLy4+W7NaQAs1sSMt8aDP07oE78pa51NyejmQLKOnt7tOw==}
@@ -694,6 +755,9 @@ packages:
 
   '@libp2p/ping@2.0.29':
     resolution: {integrity: sha512-0iZOtdm7tM2NAZ06Tgh9avPMUO2xavaUH7HNXBHCG13FCiKLjPKpjKOcic47jOI2RGPQ9Fv5MNr/3OCl29bZKA==}
+
+  '@libp2p/pubsub@10.1.10':
+    resolution: {integrity: sha512-PJiHERHJ1NFJpTuQjYLhTsMO0tvaP7MXlWlkRpJ6eShYZ4x8CAZI5/5A7pICQdptyHXRU92mkAOTn38YrZ5c/w==}
 
   '@libp2p/record@4.0.5':
     resolution: {integrity: sha512-HfKugY+ZKizhxE/hbLqI8zcFLfYly2gakaL0k8wBXCfmOTrAV7UajeJWkWqrKkIEMHASUyapm746KF+i9e7Xmw==}
@@ -1881,6 +1945,10 @@ packages:
     resolution: {integrity: sha512-ZySD7Nf91aLB0RxL4KGrKHBXl7Eds1DAmEdcoVawXnLD7SDhpNgtuII2aAkg7a7QS41jxPSZ17p4VdGnMHk3MQ==}
     engines: {node: '>=0.4.0'}
 
+  denque@2.1.0:
+    resolution: {integrity: sha512-HVQE3AAb/pxF8fQAoiqpvg9i3evqug3hoiwakOyZAwJm+6vZehbkYXZ0l4JxS+I3QxM97v5aaRNhj8v5oBhekw==}
+    engines: {node: '>=0.10'}
+
   depd@2.0.0:
     resolution: {integrity: sha512-g7nH6P6dyDioJogAAGprGpCtVImJhpPk/roCzdb3fIh61/s/nPsfR6onyMwkCAR/OlC3yBC0lESvUoQEAssIrw==}
     engines: {node: '>= 0.8'}
@@ -2597,6 +2665,10 @@ packages:
 
   it-length-prefixed@10.0.1:
     resolution: {integrity: sha512-BhyluvGps26u9a7eQIpOI1YN7mFgi8lFwmiPi07whewbBARKAG9LE09Odc8s1Wtbt2MB6rNUrl7j9vvfXTJwdQ==}
+    engines: {node: '>=16.0.0', npm: '>=7.0.0'}
+
+  it-length-prefixed@9.1.1:
+    resolution: {integrity: sha512-O88nBweT6M9ozsmok68/auKH7ik/slNM4pYbM9lrfy2z5QnpokW5SlrepHZDKtN71llhG2sZvd6uY4SAl+lAQg==}
     engines: {node: '>=16.0.0', npm: '>=7.0.0'}
 
   it-length@3.0.8:
@@ -4481,6 +4553,23 @@ snapshots:
 
   '@chainsafe/is-ip@2.1.0': {}
 
+  '@chainsafe/libp2p-gossipsub@14.1.1':
+    dependencies:
+      '@libp2p/crypto': 5.1.1
+      '@libp2p/interface': 2.9.0
+      '@libp2p/interface-internal': 2.3.11
+      '@libp2p/peer-id': 5.1.2
+      '@libp2p/pubsub': 10.1.10
+      '@multiformats/multiaddr': 12.4.0
+      denque: 2.1.0
+      it-length-prefixed: 9.1.1
+      it-pipe: 3.0.1
+      it-pushable: 3.2.3
+      multiformats: 13.3.4
+      protons-runtime: 5.5.0
+      uint8arraylist: 2.4.8
+      uint8arrays: 5.1.0
+
   '@chainsafe/libp2p-noise@16.1.3':
     dependencies:
       '@chainsafe/as-chacha20poly1305': 0.1.0
@@ -5219,6 +5308,22 @@ snapshots:
       '@libp2p/interface-internal': 2.3.11
       '@multiformats/multiaddr': 12.4.0
       it-byte-stream: 2.0.2
+      uint8arrays: 5.1.0
+
+  '@libp2p/pubsub@10.1.10':
+    dependencies:
+      '@libp2p/crypto': 5.1.1
+      '@libp2p/interface': 2.9.0
+      '@libp2p/interface-internal': 2.3.11
+      '@libp2p/peer-collections': 6.0.27
+      '@libp2p/peer-id': 5.1.2
+      '@libp2p/utils': 6.6.2
+      it-length-prefixed: 10.0.1
+      it-pipe: 3.0.1
+      it-pushable: 3.2.3
+      multiformats: 13.3.4
+      p-queue: 8.1.0
+      uint8arraylist: 2.4.8
       uint8arrays: 5.1.0
 
   '@libp2p/record@4.0.5':
@@ -7431,6 +7536,8 @@ snapshots:
 
   delayed-stream@1.0.0: {}
 
+  denque@2.1.0: {}
+
   depd@2.0.0: {}
 
   derive-valtio@0.1.0(valtio@1.13.2(@types/react@19.1.4)(react@19.1.0)):
@@ -8286,6 +8393,14 @@ snapshots:
       uint8arraylist: 2.4.8
 
   it-length-prefixed@10.0.1:
+    dependencies:
+      it-reader: 6.0.4
+      it-stream-types: 2.0.2
+      uint8-varint: 2.0.4
+      uint8arraylist: 2.4.8
+      uint8arrays: 5.1.0
+
+  it-length-prefixed@9.1.1:
     dependencies:
       it-reader: 6.0.4
       it-stream-types: 2.0.2
