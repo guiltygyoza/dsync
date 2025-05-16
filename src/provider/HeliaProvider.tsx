@@ -32,17 +32,6 @@ export const HeliaProvider = ({ children }: { children: React.ReactNode }) => {
   const startHelia = useCallback(async () => {
     if (helia) {
       console.info("helia already started");
-
-      const orbitdb = await createOrbitDB({
-        ipfs: helia,
-        id: "user-1",
-      });
-      const db = orbitdb.open("db-kiwi-jan", {
-        AccessController: IPFSAccessController({
-          write: [orbitdb.identity.id],
-        }),
-      });
-      db.put("hello", "world");
     } else if (window.helia) {
       console.info("found a windowed instance of helia, populating ...");
       setHelia(window.helia);
@@ -65,6 +54,29 @@ export const HeliaProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     startHelia();
   }, []);
+
+  const test = useCallback(async () => {
+    if (helia) {
+      console.log("helia started ------", helia);
+      const orbitdb = await createOrbitDB({
+        ipfs: helia,
+        id: "user-1",
+      });
+      const db = await orbitdb.open("db-kiwi-jan", {
+        type: "documents",
+        AccessController: IPFSAccessController({
+          write: [orbitdb.identity.id],
+        }),
+      });
+      console.log("putting", db);
+      await db.put({ _id: "doc-1", content: "hello" });
+      console.log("putted");
+    }
+  }, [helia]);
+
+  useEffect(() => {
+    test();
+  }, [test]);
 
   return (
     <HeliaContext.Provider
