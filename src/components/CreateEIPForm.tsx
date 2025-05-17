@@ -1,23 +1,15 @@
 import React, { useState } from "react";
-import { useReplicache } from "../replicache/ReplicacheContext";
 import { useNavigate } from "react-router-dom";
 
-function CreateChamberForm() {
-	// Get rep and userId from context
-	const { rep, userId } = useReplicache();
+function CreateEIPForm() {
 	const navigate = useNavigate();
 	const [title, setTitle] = useState("");
 	const [description, setDescription] = useState("");
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
-	// Use userId from context for createdBy
-	// const createdBy = 'user1'; // Remove hardcoded ID
-
 	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
-		// Ensure rep and userId are available
-		if (!rep || !userId || isSubmitting) return;
 		if (!title.trim() || !description.trim()) {
 			setError("Title and description cannot be empty.");
 			return;
@@ -27,13 +19,14 @@ function CreateChamberForm() {
 		setError(null);
 
 		try {
-			await rep.mutate.createChamber({ title, description, createdBy: userId });
+			// TODO: add to db
+			console.log(`TODO - add to db: { title: ${title}, description: ${description} }`);
 			setTitle("");
 			setDescription("");
 			navigate("/");
 		} catch (err) {
-			console.error("Failed to create chamber:", err);
-			setError("Failed to create chamber. Please try again.");
+			console.error("Failed to create EIP:", err);
+			setError("Failed to create EIP. Please try again.");
 		} finally {
 			setIsSubmitting(false);
 		}
@@ -70,11 +63,11 @@ function CreateChamberForm() {
 					disabled={isSubmitting}
 				/>
 			</div>
-			<button type="submit" disabled={!rep || !userId || isSubmitting}>
-				{isSubmitting ? "Creating..." : "Create Chamber"}
+			<button type="submit" disabled={isSubmitting}>
+				{isSubmitting ? "Creating..." : "Create EIP"}
 			</button>
 		</form>
 	);
 }
 
-export default CreateChamberForm;
+export default CreateEIPForm;

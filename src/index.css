@@ -7,6 +7,8 @@ body {
 	-webkit-font-smoothing: antialiased;
 	-moz-osx-font-smoothing: grayscale;
 	box-sizing: border-box;
+	background-color: var(--primary-background-color);
+	color: var(--primary-text-color);
 	transition:
 		background-color 0.3s ease,
 		color 0.3s ease;
@@ -18,8 +20,8 @@ body {
 	font-weight: 400;
 
 	color-scheme: light dark;
-	color: rgba(255, 255, 255, 0.87);
-	background-color: #242424;
+	--primary-background-color: #242424;
+	--primary-text-color: rgba(255, 255, 255, 0.87);
 
 	font-synthesis: none;
 	text-rendering: optimizeLegibility;
@@ -65,8 +67,8 @@ button:focus-visible {
 
 @media (prefers-color-scheme: light) {
 	:root {
-		color: #213547;
-		background-color: #ffffff;
+		--primary-background-color: #ffffff;
+		--primary-text-color: #213547;
 	}
 
 	a:hover {
@@ -78,10 +80,25 @@ button:focus-visible {
 	}
 }
 
+@media (prefers-color-scheme: dark) {
+	:root {
+		--primary-background-color: #282c34;
+		--primary-text-color: #ffffff;
+	}
+
+	a:hover {
+		color: #747bff;
+	}
+
+	button {
+		background-color: #1a1a1a;
+	}
+}
+
 /* Light mode (default) */
 body.light-mode {
-	background-color: #ffffff;
-	color: #282c34;
+	--primary-background-color: #ffffff;
+	--primary-text-color: #282c34;
 }
 
 .light-mode nav {
@@ -101,8 +118,8 @@ body.light-mode {
 
 /* Dark mode */
 body.dark-mode {
-	background-color: #282c34;
-	color: #ffffff;
+	--primary-background-color: #282c34;
+	--primary-text-color: #ffffff;
 }
 
 .dark-mode nav {
