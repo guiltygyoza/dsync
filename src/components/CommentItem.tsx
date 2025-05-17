@@ -1,7 +1,7 @@
-import type { Comment } from "../replicache/types";
+import type { IComment } from "../types/comment";
 
 interface CommentItemProps {
-	comment: Comment;
+	comment: IComment;
 }
 
 function CommentItem({ comment }: CommentItemProps) {

@@ -1,17 +1,15 @@
 import React, { useState } from "react";
-import { useParams } from "react-router-dom";
-import { useReplicache } from "../replicache/ReplicacheContext";
+// import { useParams } from "react-router-dom";
 
 function CreateCommentForm() {
-	const { chamberId } = useParams<{ chamberId: string }>();
-	const { rep, userId } = useReplicache();
+	// const { eipId } = useParams<{ eipId: string }>();
 	const [text, setText] = useState("");
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
 	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
-		if (!rep || !userId || !chamberId || isSubmitting || !text.trim()) {
+		if (isSubmitting || !text.trim()) {
 			if (!text.trim()) setError("Comment cannot be empty.");
 			return;
 		}
@@ -20,11 +18,7 @@ function CreateCommentForm() {
 		setError(null);
 
 		try {
-			await rep.mutate.createComment({
-				chamberId,
-				text,
-				createdBy: userId,
-			});
+			// TODO: add comment to db
 			setText("");
 		} catch (err) {
 			console.error("Failed to create comment:", err);
@@ -44,9 +38,9 @@ function CreateCommentForm() {
 				rows={3}
 				required
 				style={{ width: "100%", padding: "8px", marginBottom: "10px" }}
-				disabled={!rep || !userId || isSubmitting}
+				disabled={isSubmitting}
 			/>
-			<button type="submit" disabled={!rep || !userId || isSubmitting || !text.trim()}>
+			<button type="submit" disabled={isSubmitting || !text.trim()}>
 				{isSubmitting ? "Posting..." : "Post Comment"}
 			</button>
 		</form>

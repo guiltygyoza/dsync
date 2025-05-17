@@ -1,0 +1,103 @@
+.category-header-nav {
+  display: flex;
+  gap: 15px;
+  padding: 10px; /* Adjusted padding for all sides */
+  border-bottom: 1px solid #ddd; /* Lighter border for light background */
+  margin-bottom: 20px;
+  background-color: #f0f0f0; /* Light background for the nav bar */
+  border-radius: 4px; /* Optional: to match tab radius if desired */
+}
+.category-header-nav a {
+  color: #333; /* Dark text for inactive tabs */
+  text-decoration: none;
+  font-weight: bold;
+  padding: 5px 10px;
+  border-radius: 4px;
+	transition: background-color 0.3s, color 0.3s;
+}
+.category-header-nav a:hover, .category-header-nav a.active {
+  background-color: #333; /* Dark background for active/hover */
+  color: #fff; /* Light text for active/hover */
+}
+.category-section {
+  margin-bottom: 30px;
+}
+.category-title {
+  font-size: 2em;
+  color: #fff;
+  margin-bottom: 15px;
+  border-bottom: 2px solid #555;
+  padding-bottom: 5px;
+}
+.status-group details {
+  /* background-color: #282828; */ /* Will be inherited */
+  border: 1px solid #333;
+  border-radius: 5px;
+  margin-bottom: 15px;
+  overflow: hidden;
+}
+.status-group summary {
+  font-size: 1.5em;
+  padding: 15px;
+  cursor: pointer;
+  background-color: #1e1e1e; /* Keep this distinct for the summary bar */
+  color: #eee;
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+}
+.status-group summary::-webkit-details-marker {
+  display: none;
+}
+.status-group summary::after {
+  content: '+';
+  font-weight: bold;
+  margin-left: 10px;
+  transition: transform 0.2s ease-in-out;
+}
+.status-group details[open] summary::after {
+  transform: rotate(45deg);
+}
+.status-group details[open] summary {
+  border-bottom: 1px solid #333;
+}
+.eip-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0;
+}
+.eip-table th, .eip-table td {
+  text-align: left;
+  padding: 12px 15px;
+  border-bottom: 1px solid #383838;
+}
+.eip-table th {
+  background-color: #222; /* Keep header distinct or make inherit? For now, keeping it */
+  color: #ddd;
+  font-weight: bold;
+}
+
+.eip-table td {
+  /* background-color: #2c2c2c; */ /* Will be inherited */
+}
+.eip-table tr:last-child td {
+  border-bottom: none;
+}
+.eip-table tr:hover td {
+  background-color: #3a3a3a; /* Keep hover distinct */
+}
+.eip-table a {
+  color: #70a1ff;
+  text-decoration: none;
+}
+.eip-table a:hover {
+  text-decoration: underline;
+}
+.eip-number { width: 10%; }
+.eip-title { width: 60%; }
+.eip-author { width: 30%; }
+.empty-status {
+  padding: 15px;
+  color: #888;
+  /* background-color: #2c2c2c; */ /* Will be inherited */
+} 
