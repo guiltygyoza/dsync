@@ -49,13 +49,8 @@ export interface DefaultLibp2pServices extends Record<string, unknown> {
 }
 export const bootstrapConfig = {
     list: [
-        "/dnsaddr/bootstrap.libp2p.io/p2p/QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN",
-        "/dnsaddr/bootstrap.libp2p.io/p2p/QmbLHAnMoJPWSCR5Zhtx6BHJX9KiKNN6tpvbUcqanj75Nb",
-        "/dnsaddr/bootstrap.libp2p.io/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt",
-        // va1 is not in the TXT records for _dnsaddr.bootstrap.libp2p.io yet
-        // so use the host name directly
-        "/dnsaddr/va1.bootstrap.libp2p.io/p2p/12D3KooWKnDdG3iXw9eTFijk3EWSunZcFi54Zka4wmtqtt6rPxc8",
-        "/ip4/104.131.131.82/tcp/4001/p2p/QmaCpDMGvV2BGHeYERUEnRQAwe3N8SzbUtfsmvsqQLuvuJ",
+        "/ip4/ice.sacha42.com/tcp/36843/ws/p2p/12D3KooWB1J5ksLv96GTyH5Ugp1a8CDpLr5XGXpNHwWorTx95PDc",
+        "/ip4/ice.sacha42.com/tcp/36437/p2p/12D3KooWB1J5ksLv96GTyH5Ugp1a8CDpLr5XGXpNHwWorTx95PDc",
     ],
 };
 
@@ -93,7 +88,7 @@ const libp2p = await createLibp2p({
         dcutr: dcutr(),
         identify: identify(),
         identifyPush: identifyPush(),
-        pubsub: gossipsub(),
+        pubsub: gossipsub({ allowPublishToZeroTopicPeers: true }),
         autonat: autoNAT(),
         delegatedRouting: () =>
             createDelegatedRoutingV1HttpApiClient(
@@ -123,18 +118,21 @@ const orbitdb = await createOrbitDB({
 });
 
 console.log("orbitdb", orbitdb);
-const db = await orbitdb.open("db-kiwi-jan-34234", {
+const db = await orbitdb.open("db-jan-<>-kiwi-1", {
     type: "documents",
-    AccessController: IPFSAccessController({
-        write: ["*"],
-    }),
 });
 
-db.events.on("update", async (entry) => {
-    console.log(entry);
-    const all = await db.all();
-    console.log(all);
-});
+await db.put({_id: "123", name: "hello world 1"})
+await db.put({_id: "124", name: "hello world 2"})
+
+console.log(await db.get("123"))
+console.log(await db.get("124"))
+
+//db.events.on("update", async (entry) => {
+//    console.log(entry);
+//    const all = await db.all();
+//    console.log(all);
+//});
 
 setTimeout(() => {
     console.log("orbitdb", orbitdb);

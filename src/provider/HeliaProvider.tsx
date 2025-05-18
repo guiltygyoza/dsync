@@ -11,9 +11,9 @@ import { uPnPNAT } from "@libp2p/upnp-nat";
 import { ipnsSelector } from "ipns/selector";
 import { ipnsValidator } from "ipns/validator";
 import {
-    createHelia,
-    type DefaultLibp2pServices,
-    type HeliaLibp2p,
+  createHelia,
+  type DefaultLibp2pServices,
+  type HeliaLibp2p,
 } from "helia";
 import { createLibp2p } from "libp2p";
 import { useEffect, useState, useCallback, createContext } from "react";
@@ -27,156 +27,165 @@ import * as filters from "@libp2p/websockets/filters";
 import { identify, identifyPush } from "@libp2p/identify";
 import { autoNAT } from "@libp2p/autonat";
 import { kadDHT } from "@libp2p/kad-dht";
+import { devToolsMetrics } from "@libp2p/devtools-metrics";
 import { peerIdFromString } from "@libp2p/peer-id";
+import { tcp } from "@libp2p/tcp";
 
 export const bootstrapConfig = {
-    list: [
-        "/dnsaddr/bootstrap.libp2p.io/p2p/QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN",
-        "/dnsaddr/bootstrap.libp2p.io/p2p/QmbLHAnMoJPWSCR5Zhtx6BHJX9KiKNN6tpvbUcqanj75Nb",
-        "/dnsaddr/bootstrap.libp2p.io/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt",
-        // va1 is not in the TXT records for _dnsaddr.bootstrap.libp2p.io yet
-        // so use the host name directly
-        "/dnsaddr/va1.bootstrap.libp2p.io/p2p/12D3KooWKnDdG3iXw9eTFijk3EWSunZcFi54Zka4wmtqtt6rPxc8",
-        "/ip4/104.131.131.82/tcp/4001/p2p/QmaCpDMGvV2BGHeYERUEnRQAwe3N8SzbUtfsmvsqQLuvuJ",
-    ],
+  list: [
+    "/dns4/ice.sacha42.com/tcp/443/wss/p2p/12D3KooWB1J5ksLv96GTyH5Ugp1a8CDpLr5XGXpNHwWorTx95PDc",
+    //"/ip4/157.90.152.156/tcp/36437/p2p/12D3KooWB1J5ksLv96GTyH5Ugp1a8CDpLr5XGXpNHwWorTx95PDc",
+  ],
 };
 
 export const HeliaContext = createContext<{
-    helia: HeliaLibp2p<Libp2p<DefaultLibp2pServices>> | null;
-    //identities: Identity | null;
-    fs: UnixFS | null;
-    error: boolean;
-    starting: boolean;
+  helia: HeliaLibp2p<Libp2p<DefaultLibp2pServices>> | null;
+  //identities: Identity | null;
+  fs: UnixFS | null;
+  error: boolean;
+  starting: boolean;
 }>({
-    helia: null,
-    fs: null,
-    error: false,
-    starting: true,
+  helia: null,
+  fs: null,
+  error: false,
+  starting: true,
 });
 
 export const HeliaProvider = ({ children }: { children: React.ReactNode }) => {
-    const [helia, setHelia] = useState<HeliaLibp2p<
-        Libp2p<DefaultLibp2pServices>
-    > | null>(null);
-    const [fs, setFs] = useState<UnixFS | null>(null);
-    const [starting, setStarting] = useState(true);
-    const [error, setError] = useState(false);
-    const [te, setTe] = useState(false);
+  const [helia, setHelia] = useState<HeliaLibp2p<
+    Libp2p<DefaultLibp2pServices>
+  > | null>(null);
+  const [fs, setFs] = useState<UnixFS | null>(null);
+  const [starting, setStarting] = useState(true);
+  const [error, setError] = useState(false);
+  const [te, setTe] = useState(false);
 
-    const startHelia = useCallback(async () => {
-        if (helia) {
-            console.info("helia already started");
-        } else if (window.helia) {
-            console.info("found a windowed instance of helia, populating ...");
-            setHelia(window.helia);
-            setFs(unixfs(window.helia));
-            setStarting(false);
-        } else {
-            try {
-                console.info("Starting Helia");
-                const libp2p = await createLibp2p({
-                    addresses: {
-                        listen: ["/p2p-circuit", "/webrtc", "/webrtc-direct"],
-                    },
-                    peerDiscovery: [bootstrap(bootstrapConfig)],
-                    connectionEncrypters: [noise()],
-                    connectionGater: {
-                        denyDialMultiaddr: () => {
-                            return false;
-                        },
-                    },
-                    streamMuxers: [yamux()],
-                    services: {
-                        dht: kadDHT({
-                            clientMode: true,
-                            validators: {
-                                ipns: ipnsValidator,
-                            },
-                            selectors: {
-                                ipns: ipnsSelector,
-                            },
-                        }),
-                        ping: ping(),
-                        dcutr: dcutr(),
-                        identify: identify(),
-                        identifyPush: identifyPush(),
-                        pubsub: gossipsub(),
-                        autonat: autoNAT(),
-                        delegatedRouting: () =>
-                            createDelegatedRoutingV1HttpApiClient(
-                                "https://delegated-ipfs.dev",
-                                delegatedHTTPRoutingDefaults()
-                            ),
-                    },
-                    transports: [
-                        circuitRelayTransport(),
-                        webRTC(),
-                        webRTCDirect(),
-                        webSockets({
-                            filter: filters.all,
-                        }),
-                    ],
-                });
-                const helia = await createHelia({ libp2p });
-                await libp2p.dial(
-                    peerIdFromString(
-                        "12D3KooWL78hSZyyfANwcgCbVDvZtbsY5RxaaVCWWsL8WBMfAENQ"
-                    )
-                );
-                // @ts-expect-error -- .
-                setHelia(helia);
-                setFs(unixfs(helia));
-                setStarting(false);
-            } catch (e) {
-                console.error(e);
-                setError(true);
-            }
+  const startHelia = useCallback(async () => {
+    if (helia) {
+      console.info("helia already started");
+    } else if (window.helia) {
+      console.info("found a windowed instance of helia, populating ...");
+      setHelia(window.helia);
+      setFs(unixfs(window.helia));
+      setStarting(false);
+    } else {
+      try {
+        console.info("Starting Helia");
+        const libp2p = await createLibp2p({
+          addresses: {
+            listen: ["/p2p-circuit", "/webrtc", "/webrtc-direct"],
+          },
+          peerDiscovery: [bootstrap(bootstrapConfig)],
+          connectionEncrypters: [noise()],
+          connectionGater: {
+            denyDialMultiaddr: () => {
+              return false;
+            },
+          },
+          metrics: devToolsMetrics(),
+          streamMuxers: [yamux()],
+          services: {
+            //dht: kadDHT({
+            //  clientMode: true,
+            //  validators: {
+            //    ipns: ipnsValidator,
+            //  },
+            //  selectors: {
+            //    ipns: ipnsSelector,
+            //  },
+            //}),
+            ping: ping(),
+            dcutr: dcutr(),
+            identify: identify(),
+            identifyPush: identifyPush(),
+            pubsub: gossipsub({
+              allowPublishToZeroTopicPeers: true,
+            }),
+            autonat: autoNAT(),
+            //delegatedRouting: () =>
+            //  createDelegatedRoutingV1HttpApiClient(
+            //    "https://delegated-ipfs.dev",
+            //    delegatedHTTPRoutingDefaults()
+            //  ),
+          },
+          transports: [
+            circuitRelayTransport(),
+            webRTC(),
+            //tcp(),
+            webRTCDirect(),
+            webSockets({
+              filter: filters.all,
+            }),
+          ],
+        });
+        //await libp2p.dial(
+        //  peerIdFromString(
+        //    "12D3KooWB1J5ksLv96GTyH5Ugp1a8CDpLr5XGXpNHwWorTx95PDc"
+        //  )
+        //);
+        const helia = await createHelia({ libp2p });
+        //await libp2p.dial(
+        //  peerIdFromString(
+        //    "12D3KooWL78hSZyyfANwcgCbVDvZtbsY5RxaaVCWWsL8WBMfAENQ"
+        //  )
+        //);
+        // @ts-expect-error -- .
+        setHelia(helia);
+        setFs(unixfs(helia));
+        setStarting(false);
+      } catch (e) {
+        console.error(e);
+        setError(true);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    startHelia();
+  }, []);
+
+  const test = useCallback(async () => {
+    if (helia && !te) {
+      try {
+        console.log("helia started ------", helia);
+        const orbitdb = await createOrbitDB({
+          ipfs: helia,
+        });
+        console.log("orbitdb", orbitdb);
+        const db = await orbitdb.open(
+          "/orbitdb/zdpuAxkJX7cguXGCb9y3Gu4qbn7ajdcP4XkyPFmUZMh5Jqeb1"
+        );
+
+        for await (const record of db.iterator()) {
+          console.log(record);
         }
-    }, []);
+        await db.put({ _id: "125", name: "hello world 1" });
+        await db.put({ _id: "126", name: "hello world 2" });
+        console.log(await db.get("123"));
+        console.log(await db.get("124"));
+        setTe(true);
+        //const all = await db.all();
+        //console.log("all", all);
+      } catch (e) {
+        console.error("error123 ", e);
+      }
+    }
+  }, [helia]);
 
-    useEffect(() => {
-        startHelia();
-    }, []);
+  useEffect(() => {
+    test();
+  }, [test]);
 
-    const test = useCallback(async () => {
-        if (helia && !te) {
-            try {
-                console.log("helia started ------", helia);
-                const orbitdb = await createOrbitDB({
-                    ipfs: helia,
-                });
-                console.log("orbitdb", orbitdb);
-                const db = await orbitdb.open("db-kiwi-jan-34234", {
-                    AccessController: IPFSAccessController({
-                        write: ["*"],
-                    }),
-                });
-                console.log("putting", db);
-                await db.add("hello");
-                console.log("putted");
-                setTe(true);
-                //const all = await db.all();
-                //console.log("all", all);
-            } catch (e) {
-                console.error("error123 ", e);
-            }
-        }
-    }, [helia]);
-
-    useEffect(() => {
-        test();
-    }, [test]);
-
-    return (
-        <HeliaContext.Provider
-            value={{
-                helia,
-                fs,
-                error,
-                starting,
-            }}
-        >
-            {children}
-        </HeliaContext.Provider>
-    );
+  return (
+    <HeliaContext.Provider
+      value={{
+        helia,
+        fs,
+        error,
+        starting,
+      }}
+    >
+      {children}
+    </HeliaContext.Provider>
+  );
 };
