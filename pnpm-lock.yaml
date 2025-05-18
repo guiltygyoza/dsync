@@ -26,6 +26,9 @@ importers:
       '@helia/unixfs':
         specifier: ^5.0.2
         version: 5.0.2
+      '@ipshipyard/libp2p-auto-tls':
+        specifier: ^1.0.0
+        version: 1.0.0
       '@libp2p/autonat':
         specifier: ^2.0.30
         version: 2.0.30
@@ -47,12 +50,21 @@ importers:
       '@libp2p/kad-dht':
         specifier: ^15.0.2
         version: 15.0.2
+      '@libp2p/keychain':
+        specifier: ^5.2.1
+        version: 5.2.1
       '@libp2p/mdns':
         specifier: ^11.0.35
         version: 11.0.35
+      '@libp2p/peer-id':
+        specifier: ^5.1.2
+        version: 5.1.2
       '@libp2p/ping':
         specifier: ^2.0.29
         version: 2.0.29
+      '@libp2p/tcp':
+        specifier: ^10.1.10
+        version: 10.1.10
       '@libp2p/tls':
         specifier: ^2.2.0
         version: 2.2.0
