@@ -1,0 +1,22 @@
+services:
+  proxy:
+    container_name: proxy
+    image: valian/docker-nginx-auto-ssl
+    restart: on-failure
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ssl_data:/etc/resty-auto-ssl
+    environment:
+      FORCE_HTTPS: "true"
+      SITES: <domain>=http://<ip>:<port>
+
+  node:
+    container_name: node
+    image: dsync/node
+    restart: on-failure
+
+
+volumes:
+  ssl_data:
