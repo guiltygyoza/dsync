@@ -1,5 +1,5 @@
 {
-    "name": "dsync-services",
+    "name": "@dsync/services",
     "version": "1.0.0",
     "description": "",
     "main": "index.js",
