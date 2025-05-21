@@ -2,7 +2,7 @@
 
 import { Command } from 'commander';
 import { createHelia } from 'helia';
-import { createOrbitDB } from '@orbitdb/core';
+import { createOrbitDB, IPFSAccessController } from '@orbitdb/core';
 import { createLibp2p } from 'libp2p';
 import { noise } from '@chainsafe/libp2p-noise';
 import { yamux } from '@chainsafe/libp2p-yamux';
@@ -114,9 +114,13 @@ program
       ...(privKeyBuffer && { identity: { privKey: privKeyBuffer } }),
     });
 
+    console.log(libp2p.getMultiaddrs());
+
+
     const helia = await createHelia({ libp2p });
-    const orbitdb = await createOrbitDB({ ipfs: helia });
-    const db = await orbitdb.open('db-jan-<>-kiwi-1', { type: 'documents' });
+    const orbitdb = await createOrbitDB({ ipfs: helia, id: "userA" });
+    console.log('id', orbitdb.identity.id);
+    const db = await orbitdb.open('db-jan-kiwi-1', { type: 'documents', AccessController: IPFSAccessController({write: [orbitdb.identity.id]}) });
 
     console.log('Database address:', db.address.toString());
     console.log('Node is running. Press Ctrl+C to stop.');

@@ -153,7 +153,7 @@ export const HeliaProvider = ({ children }: { children: React.ReactNode }) => {
         });
         console.log("orbitdb", orbitdb);
         const db = await orbitdb.open(
-          "/orbitdb/zdpuAxkJX7cguXGCb9y3Gu4qbn7ajdcP4XkyPFmUZMh5Jqeb1"
+          "/orbitdb/zdpuAptaCCtgsdLgWtKQM12yLAg917wjwtQRepPiy9t9W3gy1"
         );
 
         for await (const record of db.iterator()) {

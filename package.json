@@ -14,7 +14,6 @@
     "frontend",
     "services"
   ],
-  "dependencies": {},
   "devDependencies": {
     "@eslint/js": "9.27.0",
     "eslint": "9.27.0",
@@ -27,9 +26,13 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "@ipshipyard/node-datachannel",
+      "bufferutil",
+      "classic-level",
       "esbuild",
+      "keccak",
       "pprof",
-      "protobufjs"
+      "protobufjs",
+      "utf-8-validate"
     ]
   }
 }

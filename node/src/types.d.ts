@@ -1,5 +1,7 @@
 declare module '@orbitdb/core' {
-    export function createOrbitDB(options: { ipfs: any }): Promise<any>;
+    export function createOrbitDB({ ipfs, id, identity, identities, directory } = {}): Promise<any>;
+    export function Identities({ keystore, path, storage, ipfs } = {}): Promise<any>;
+    export function IPFSAccessController({ write, storage } = {}): Promise<({ orbitdb, identities, address })>;
 }
 
 declare module 'commander' {
