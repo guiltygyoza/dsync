@@ -33,8 +33,12 @@ import { tcp } from "@libp2p/tcp";
 
 export const bootstrapConfig = {
   list: [
-    "/dns4/ice.sacha42.com/tcp/443/wss/p2p/12D3KooWB1J5ksLv96GTyH5Ugp1a8CDpLr5XGXpNHwWorTx95PDc",
-    //"/ip4/157.90.152.156/tcp/36437/p2p/12D3KooWB1J5ksLv96GTyH5Ugp1a8CDpLr5XGXpNHwWorTx95PDc",
+    // "/dns4/ice.sacha42.com/tcp/443/wss/p2p/12D3KooW9ytqFZdCap4t331g5a9VtvhMhbYhoE5CFu8zcVc8Adg1",
+    // "/ip4/157.90.152.156/tcp/36437/p2p/12D3KooWHYzgG1WpykEc2bqynAzCV5idt1UZmqQhxzuLcK2RvPWU",
+    // "/ip4/5.75.178.220/tcp/36437/p2p/12D3KooWBkPEDWKWCdZY28Kyy7TnegeRT61obxwdpFuQ7MfcVdRQ",
+    // "/ip4/5.75.178.220/tcp/36843/ws/p2p/12D3KooWBkPEDWKWCdZY28Kyy7TnegeRT61obxwdpFuQ7MfcVdRQ",
+    "/ip4/127.0.0.1/tcp/36437/p2p/12D3KooW9ytqFZdCap4t331g5a9VtvhMhbYhoE5CFu8zcVc8Adg1",
+    "/ip4/127.0.0.1/tcp/36843/ws/p2p/12D3KooW9ytqFZdCap4t331g5a9VtvhMhbYhoE5CFu8zcVc8Adg1",
   ],
 };
 
@@ -124,11 +128,9 @@ export const HeliaProvider = ({ children }: { children: React.ReactNode }) => {
         //  )
         //);
         const helia = await createHelia({ libp2p });
-        //await libp2p.dial(
-        //  peerIdFromString(
-        //    "12D3KooWL78hSZyyfANwcgCbVDvZtbsY5RxaaVCWWsL8WBMfAENQ"
-        //  )
-        //);
+        // await libp2p.dial(
+        //     multiaddr("/ip4/5.75.178.220/tcp/36437/p2p/12D3KooWBkPEDWKWCdZY28Kyy7TnegeRT61obxwdpFuQ7MfcVdRQ")
+        // );
         // @ts-expect-error -- .
         setHelia(helia);
         setFs(unixfs(helia));
@@ -153,14 +155,17 @@ export const HeliaProvider = ({ children }: { children: React.ReactNode }) => {
         });
         console.log("orbitdb", orbitdb);
         const db = await orbitdb.open(
-          "/orbitdb/zdpuAptaCCtgsdLgWtKQM12yLAg917wjwtQRepPiy9t9W3gy1"
+          "/orbitdb/zdpuAps3sFqVN9nbNNAchHAHN2o9MefmpX1FgbsgMZY8zX8V6"
         );
 
+        console.log("huj")
+        console.log("db", db);
         for await (const record of db.iterator()) {
-          console.log(record);
+          console.log("huj", record);
         }
-        await db.put({ _id: "125", name: "hello world 1" });
-        await db.put({ _id: "126", name: "hello world 2" });
+        // await db.put({ _id: "125", name: "hello world 1" });
+        // await db.put({ _id: "126", name: "hello world 2" });
+        console.log("huj2")
         console.log(await db.get("123"));
         console.log(await db.get("124"));
         setTe(true);

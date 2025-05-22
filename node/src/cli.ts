@@ -25,6 +25,7 @@ import { ipnsValidator } from 'ipns/validator';
 import { gossipsub } from '@chainsafe/libp2p-gossipsub';
 import * as filters from '@libp2p/websockets/filters';
 import { keychain } from '@libp2p/keychain';
+import { generateKeyPairFromSeed } from '@libp2p/crypto/keys';
 
 interface RunOptions {
     tcpPort?: number;
@@ -67,6 +68,8 @@ program
         privKeyBuffer = privKeyBuffer.subarray(0, 32);
       }
     }
+    const privateKey = await generateKeyPairFromSeed("Ed25519", new Uint8Array(privKeyBuffer));
+
 
     const addresses = {
       listen: [
@@ -81,6 +84,7 @@ program
     };
 
     const libp2p = await createLibp2p({
+      privateKey,
       addresses,
       peerDiscovery: [bootstrap(bootstrapConfig), mdns()],
       connectionEncrypters: [noise(), tls()],
@@ -111,16 +115,24 @@ program
         webSockets({ filter: filters.all }),
         tcp(),
       ],
-      ...(privKeyBuffer && { identity: { privKey: privKeyBuffer } }),
     });
 
     console.log(libp2p.getMultiaddrs());
-
+    // const DBFINDER_NAME = "DBFinder";
 
     const helia = await createHelia({ libp2p });
-    const orbitdb = await createOrbitDB({ ipfs: helia, id: "userA" });
-    console.log('id', orbitdb.identity.id);
-    const db = await orbitdb.open('db-jan-kiwi-1', { type: 'documents', AccessController: IPFSAccessController({write: [orbitdb.identity.id]}) });
+    const orbitdb = await createOrbitDB({ ipfs: helia, id: "bootstrap1" });
+    console.log('OrbitDB identity ID:', orbitdb.identity.id);
+    const db = await orbitdb.open("documents", { type: 'documents', AccessController: IPFSAccessController({write: [orbitdb.identity.id]}) });
+    // const DBFinder = await orbitdb.open(DBFINDER_NAME, { type: 'keyvalue', AccessController: IPFSAccessController({write: [orbitdb.identity.id]}) });
+    // const eip1 = await orbitdb.open("eip1", { type: 'documents', AccessController: IPFSAccessController({write: [orbitdb.identity.id]}) });
+
+    // const eip1Addr = eip1.address.toString();
+    // await DBFinder.put("eip1", eip1Addr);
+    // console.log('eip1Addr', eip1Addr);
+    // await eip1.put({ _id: "123", name: "hello world title", description: "hello world description" });
+    // console.log('eip1Addr', eip1Addr);
+
 
     console.log('Database address:', db.address.toString());
     console.log('Node is running. Press Ctrl+C to stop.');
