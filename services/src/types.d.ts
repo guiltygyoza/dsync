@@ -104,7 +104,6 @@ declare module "@orbitdb/core" {
 
     // Other necessary exports for the library's public API (simplified)
     export type OrbitDBAddress = any; // global placeholder is fine if it's just an opaque type
-    export function IPFSAccessController({ write, storage } = {});
     export function isValidAddress(address: string): boolean; // Function signature
     export function parseAddress(address: string): OrbitDBAddress; // Function signature
 

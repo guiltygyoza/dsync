@@ -71,6 +71,11 @@ program
     const privateKey = await generateKeyPairFromSeed("Ed25519", new Uint8Array(privKeyBuffer));
 
 
+    const seed = new Uint8Array(privKeyBuffer || []);
+    console.log('seed', seed.length);
+
+    const privateKey = await generateKeyPairFromSeed("Ed25519", seed);
+
     const addresses = {
       listen: [
         options.tcpPort ? `/ip4/0.0.0.0/tcp/${options.tcpPort}` : '/ip4/0.0.0.0/tcp/0',
@@ -115,15 +120,13 @@ program
         webSockets({ filter: filters.all }),
         tcp(),
       ],
+       ...(privKeyBuffer && { identity: { privKey: privKeyBuffer } }),
     });
 
     console.log(libp2p.getMultiaddrs());
     // const DBFINDER_NAME = "DBFinder";
 
     const helia = await createHelia({ libp2p });
-    const orbitdb = await createOrbitDB({ ipfs: helia, id: "bootstrap1" });
-    console.log('OrbitDB identity ID:', orbitdb.identity.id);
-    const db = await orbitdb.open("documents", { type: 'documents', AccessController: IPFSAccessController({write: [orbitdb.identity.id]}) });
     // const DBFinder = await orbitdb.open(DBFINDER_NAME, { type: 'keyvalue', AccessController: IPFSAccessController({write: [orbitdb.identity.id]}) });
     // const eip1 = await orbitdb.open("eip1", { type: 'documents', AccessController: IPFSAccessController({write: [orbitdb.identity.id]}) });
 
@@ -133,7 +136,21 @@ program
     // await eip1.put({ _id: "123", name: "hello world title", description: "hello world description" });
     // console.log('eip1Addr', eip1Addr);
 
+    const orbitdb = await createOrbitDB({ ipfs: helia, id: "userA" });
+    console.log('id', orbitdb.identity.id);
+    const db = await orbitdb.open('db-jan-kiwi-1', { type: 'documents', AccessController: IPFSAccessController({write: [orbitdb.identity.id]}) });
+    db.events.on('ready', () => {
+      console.log('Database ready');
+    });
 
+    db.events.on('error', (error: any) => {
+      console.error('Database error:', error);
+    });
+
+    db.events.on('update', async (entry: any) => {
+      console.log('Database update:', entry.payload.value);
+    });
+    
     console.log('Database address:', db.address.toString());
     console.log('Node is running. Press Ctrl+C to stop.');
 

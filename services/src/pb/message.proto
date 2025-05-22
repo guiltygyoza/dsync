@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+message DBFinderMessage {
+    enum MessageType {
+        FIND_DB = 0;
+        ADD_DB = 1;
+    }
+
+    MessageType type = 1;
+    oneof payload {
+        FindDBRequest find_db_request = 2;
+        AddDBRequest add_db_request = 3;
+    }
+}
+
+message FindDBRequest {
+    string dbName = 1;
+}
+
+message AddDBRequest {
+    string dbName = 1;
+    string dbAddress = 2;
+}
+
+message FindDBResponse {
+    string dbAddress = 1;
+}
+
+message AddDBResponse {
+    bool success = 1;
+}

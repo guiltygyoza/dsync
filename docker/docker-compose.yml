@@ -10,13 +10,17 @@ services:
       - ssl_data:/etc/resty-auto-ssl
     environment:
       FORCE_HTTPS: "true"
-      SITES: <domain>=http://<ip>:<port>
+      SITES: whydidyoustop.com=http://5.75.178.220:41597
 
   node:
     container_name: node
     image: dsync/node
     restart: on-failure
-
+    ports:
+      - 9999:9999
+    volumes:
+      - ./node:/app
+    command: run -w 9999 -k 123
 
 volumes:
   ssl_data:
