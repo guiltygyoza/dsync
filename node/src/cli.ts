@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/// <reference types="node" />
 
 import { Command } from 'commander';
 import { createHelia } from 'helia';
@@ -26,6 +27,10 @@ import { gossipsub } from '@chainsafe/libp2p-gossipsub';
 import * as filters from '@libp2p/websockets/filters';
 import { keychain } from '@libp2p/keychain';
 import { generateKeyPairFromSeed } from '@libp2p/crypto/keys';
+import express from 'express';
+import type { Request, Response, NextFunction } from 'express';
+import { Alchemy, Network } from 'alchemy-sdk';
+import crypto from 'crypto';
 
 interface RunOptions {
     tcpPort?: number;
@@ -73,6 +78,23 @@ program
     console.log('seed', seed.length);
 
     const privateKey = await generateKeyPairFromSeed("Ed25519", seed);
+
+    const ALCHEMY_API_KEY = process.env.ALCHEMY_API_KEY || undefined;
+    const ALCHEMY_WEBHOOK_SIGNING_SECRET = process.env.ALCHEMY_WEBHOOK_SIGNING_SECRET || undefined;
+    const EIP_MANAGER_CONTRACT_ADDRESS = process.env.EIP_MANAGER_CONTRACT_ADDRESS || undefined;
+    const WEBHOOK_PORT = process.env.WEBHOOK_PORT || 3000;
+
+    if (!ALCHEMY_API_KEY || !EIP_MANAGER_CONTRACT_ADDRESS) {
+      console.warn("Please set your ALCHEMY_API_KEY and EIP_MANAGER_CONTRACT_ADDRESS environment variables or update them in cli.ts");
+    }
+    if (!ALCHEMY_WEBHOOK_SIGNING_SECRET) {
+        console.warn("Remember to set your ALCHEMY_WEBHOOK_SIGNING_SECRET for webhook verification.");
+    }
+
+    const alchemy = new Alchemy({
+        apiKey: ALCHEMY_API_KEY,
+        network: Network.ETH_SEPOLIA,
+    });
 
     const addresses = {
       listen: [
@@ -163,6 +185,33 @@ program
     
     // console.log('Database address:', db.address.toString());
     console.log('Node is running. Press Ctrl+C to stop.');
+
+    const app = express();
+
+    app.use((req: Request, res: Response, next: NextFunction) => {
+      if (req.originalUrl === '/alchemy-webhook') {
+        let data = '';
+        req.setEncoding('utf8');
+        req.on('data', (chunk) => { 
+          data += chunk;
+        });
+        req.on('end', () => {
+          (req as any).rawBody = data;
+          next();
+        });
+      } else {
+        express.json()(req, res, next);
+      }
+    });
+
+    app.post('/alchemy-webhook', async (req: Request, res: Response) => {
+      // TODO
+      res.status(200).send('Webhook received');
+    });
+
+    app.listen(WEBHOOK_PORT, () => {
+      console.log(`Webhook server listening on port ${WEBHOOK_PORT}`);
+    });
 
     // Keep the process running
     process.on('SIGINT', async () => {
