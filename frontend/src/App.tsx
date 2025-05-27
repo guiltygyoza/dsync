@@ -4,7 +4,6 @@ import Navbar from "./components/Navbar";
 import HomePage from "./pages/HomePage";
 import CreateEIPPage from "./pages/CreateEIPPage";
 import EIPPage from "./pages/EIPPage";
-import { EthereumProvider } from "./ethereum/EthereumContext";
 import EIPListPage from "./pages/EIPListPage";
 import { useHelia } from "./hooks/useHelia";
 
@@ -34,7 +33,6 @@ function App() {
 	};
 
 	return (
-		<EthereumProvider>
 			<Router>
 				<Navbar theme={theme} toggleTheme={toggleTheme} />
 				<main style={{ padding: "0 20px" }} className={theme}>
@@ -57,7 +55,6 @@ function App() {
             </div>
 				</main>
 			</Router>
-		</EthereumProvider>
 	);
 }
 

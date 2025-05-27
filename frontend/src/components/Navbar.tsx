@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom"; // Import Link
-import { useEthereum } from "../ethereum/EthereumContext";
+import ConnectWallet from "./ConnectWallet"; // Import the wagmi-based ConnectWallet
 
 interface NavbarProps {
 	theme: "light" | "dark";
@@ -8,12 +8,6 @@ interface NavbarProps {
 }
 
 const Navbar: React.FC<NavbarProps> = ({ theme, toggleTheme }) => {
-	const { isConnected, address, ensName, connect, disconnect } = useEthereum();
-
-	const formatAddress = (address: string) => {
-		return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
-	};
-
 	const buttonStyles: React.CSSProperties = {
 		// Theme-specific styles for this button can be added to index.css if needed
 		// or kept minimal here if they don't conflict with global theme button styles.
@@ -49,18 +43,7 @@ const Navbar: React.FC<NavbarProps> = ({ theme, toggleTheme }) => {
 				</Link>
 			</div>
 			<div style={styles.walletAndThemeContainer}>
-				{isConnected ? (
-					<div style={styles.walletInfo}>
-						<span style={styles.walletAddress}>{ensName || formatAddress(address || "")}</span>
-						<button style={styles.disconnectButton} onClick={disconnect}>
-							Disconnect
-						</button>
-					</div>
-				) : (
-					<button style={styles.connectButton} onClick={connect}>
-						Connect Wallet
-					</button>
-				)}
+				<ConnectWallet theme={theme} />
 				<button onClick={toggleTheme} style={buttonStyles}>
 					{theme === "light" ? "🌙" : "☀️"}
 				</button>
@@ -95,36 +78,6 @@ const styles: { [key: string]: React.CSSProperties } = {
 		display: "flex",
 		alignItems: "center",
 		marginLeft: "auto",
-	},
-	connectButton: {
-		background: "#4CAF50",
-		color: "white",
-		border: "none",
-		padding: "8px 16px",
-		borderRadius: "4px",
-		cursor: "pointer",
-		fontSize: "14px",
-		fontWeight: "bold",
-	},
-	disconnectButton: {
-		background: "#f44336",
-		color: "white",
-		border: "none",
-		padding: "4px 8px",
-		borderRadius: "4px",
-		cursor: "pointer",
-		fontSize: "12px",
-		marginLeft: "10px",
-	},
-	walletInfo: {
-		display: "flex",
-		alignItems: "center",
-	},
-	walletAddress: {
-		fontSize: "14px",
-		fontFamily: "monospace",
-		padding: "6px 10px",
-		borderRadius: "4px",
 	},
 	ethIcon: {
 		width: "24px",
