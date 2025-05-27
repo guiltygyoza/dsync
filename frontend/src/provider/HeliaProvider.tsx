@@ -31,6 +31,9 @@ import { devToolsMetrics } from "@libp2p/devtools-metrics";
 import { peerIdFromString } from "@libp2p/peer-id";
 import { tcp } from "@libp2p/tcp";
 
+import { useAccount, useSignMessage } from 'wagmi';
+import OrbitDBIdentityProviderEthereum from '../OrbitDBUtils/IdentityProviderEthereum';
+
 export const bootstrapConfig = {
   list: [
     // "/dns4/ice.sacha42.com/tcp/443/wss/p2p/12D3KooW9ytqFZdCap4t331g5a9VtvhMhbYhoE5CFu8zcVc8Adg1",
@@ -42,15 +45,23 @@ export const bootstrapConfig = {
   ],
 };
 
+// Based on the structure returned by OrbitDBIdentityProviderEthereum
+type OrbitDBIdentityInstance = () => Promise<{
+  type: string;
+  getId: () => Promise<string>;
+  signIdentity: (data: string) => Promise<string>;
+}>;
+
 export const HeliaContext = createContext<{
   helia: HeliaLibp2p<Libp2p<DefaultLibp2pServices>> | null;
-  //identities: Identity | null;
   fs: UnixFS | null;
+  orbitDBIdentity: OrbitDBIdentityInstance | null; // Use the defined type
   error: boolean;
   starting: boolean;
 }>({
   helia: null,
   fs: null,
+  orbitDBIdentity: null,
   error: false,
   starting: true,
 });
@@ -63,6 +74,26 @@ export const HeliaProvider = ({ children }: { children: React.ReactNode }) => {
   const [starting, setStarting] = useState(true);
   const [error, setError] = useState(false);
   const [te, setTe] = useState(false);
+
+  const [orbitDBIdentity, setOrbitDBIdentity] = useState<OrbitDBIdentityInstance | null>(null);
+  const { address, isConnected } = useAccount();
+  const { signMessageAsync } = useSignMessage();
+
+  useEffect(() => {
+    if (isConnected && address && signMessageAsync) {
+      const walletFacade = {
+        getAddress: async () => address,
+        // Ensure signMessageAsync is correctly bound if it relies on 'this' from useSignMessage context
+        signMessage: async (message: string) => signMessageAsync({ message }),
+      };
+      const identityProviderInstance = OrbitDBIdentityProviderEthereum({ wallet: walletFacade });
+      setOrbitDBIdentity(() => identityProviderInstance); // Store the provider function itself
+      console.log("OrbitDB Identity Provider configured with address:", address);
+    } else {
+      setOrbitDBIdentity(null);
+      console.log("OrbitDB Identity Provider cleared.");
+    }
+  }, [isConnected, address, signMessageAsync]);
 
   const startHelia = useCallback(async () => {
     if (helia) {
@@ -140,60 +171,82 @@ export const HeliaProvider = ({ children }: { children: React.ReactNode }) => {
         setError(true);
       }
     }
-  }, []);
-
-  useEffect(() => {
-    startHelia();
-  }, []);
-
-  const test = useCallback(async () => {
-    if (helia && !te) {
-      try {
-        console.log("helia started ------", helia);
-        const orbitdb = await createOrbitDB({
-          ipfs: helia,
-        });
-        console.log("orbitdb", orbitdb);
-        const db = await orbitdb.open(
-          "/orbitdb/zdpuAvLv3TGJULV3K7YnerQSdjypzQJwfxRJdCc1eVdH6oK6Z"
-        );
-
-        console.log("huj")
-        console.log("db", db);
-        for await (const record of db.iterator()) {
-          console.log("huj", record);
-        }
-        try {
-            await db.put({ _id: "125", name: "hello world 1" });
-        } catch (e) {
-          console.error("error123 ", e);
-        }
-        try {
-            await db.put({ _id: "126", name: "hello world 2" });
-        } catch (e) {
-          console.error("error123 ", e);
-        }
-        console.log("huj2")
-        console.log(await db.get("125"));
-        console.log(await db.get("126"));
-        setTe(true);
-        //const all = await db.all();
-        //console.log("all", all);
-      } catch (e) {
-        console.error("error123 ", e);
-      }
-    }
   }, [helia]);
 
   useEffect(() => {
-    test();
-  }, [test]);
+    startHelia();
+  }, [startHelia]);
+
+  const testOrbitDB = useCallback(async () => {
+    if (helia && !te) {
+      console.log("Attempting OrbitDB test...");
+      if (!orbitDBIdentity && isConnected) {
+        console.warn("OrbitDB test: Wallet connected, but identity provider not yet configured. Retrying soon or check logs.");
+        return;
+      }
+      if (!orbitDBIdentity && !isConnected) {
+        console.warn("OrbitDB test: Wallet not connected, proceeding without specific identity for now (or use default).");
+      }
+
+      try {
+        console.log("Creating OrbitDB instance...");
+        const orbitdb = await createOrbitDB({
+          ipfs: helia,
+          identityProvider: orbitDBIdentity,
+        });
+        console.log("orbitdb identity id", orbitdb.identity.id);
+        console.log("OrbitDB instance created:", orbitdb);
+
+        const db = await orbitdb.open(
+          "/orbitdb/zdpuAvLv3TGJULV3K7YnerQSdjypzQJwfxRJdCc1eVdH6oK6Z" // DBFinder address
+        );
+        console.log("Test DB opened:", db.address);
+
+        if (orbitDBIdentity) {
+            console.log("Attempting to write to DB with identity:", db.identity.id);
+            try {
+                await db.put({ _id: `entry-${Date.now()}`, content: "Hello from identified user!" });
+                console.log("Put operation successful with identity.");
+            } catch (e) {
+                console.error("Error putting data with identity:", e);
+            }
+        } else {
+            console.log("Writing to DB without specific identity (or default).");
+             try {
+                await db.put({ _id: `entry-anon-${Date.now()}`, content: "Hello from anonymous user!" });
+                 console.log("Put operation successful (anonymous/default).");
+            } catch (e) {
+                console.error("Error putting data (anonymous/default):", e);
+            }
+        }
+
+        console.log("Reading DB records...");
+        const records = [];
+        for await (const record of db.iterator({ limit: 5 })) {
+          console.log("DB record:", record);
+          records.push(record);
+        }
+        console.log("Finished reading records. Count:", records.length);
+        
+        setTe(true);
+      } catch (e) {
+        console.error("Error during OrbitDB test function:", e);
+      }
+    }
+  }, [helia, te, orbitDBIdentity, isConnected]);
+
+  useEffect(() => {
+    if (helia && !starting) {
+        testOrbitDB();
+    }
+  }, [helia, starting, testOrbitDB]);
 
   return (
     <HeliaContext.Provider
       value={{
         helia,
         fs,
+        orbitDBIdentity,
         error,
         starting,
       }}
