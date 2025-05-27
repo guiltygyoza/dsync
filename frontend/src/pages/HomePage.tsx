@@ -1,12 +1,14 @@
-import ChamberList from '../components/ChamberList';
+import React from "react";
+import { Link } from "react-router-dom";
 
-function HomePage() {
-  return (
-    <div>
-      <h2>Chambers</h2>
-      <ChamberList />
-    </div>
-  );
-}
+const HomePage: React.FC = () => {
+	return (
+		<div>
+			<Link to="/eips" style={{ textDecoration: "none", color: "inherit" }}>
+				<h1>Ethereum Improvement Proposals</h1>
+			</Link>
+		</div>
+	);
+};
 
-export default HomePage; 
+export default HomePage;
