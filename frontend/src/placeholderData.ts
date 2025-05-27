@@ -1,5 +1,5 @@
-import type { IEIP } from "./types/eip";
-import type { IComment } from "./types/comment";
+import type { IEIP } from "../types/eip";
+import type { IComment } from "../types/comment";
 import { EIP_STATUS, EIP_CATEGORY } from "./constants/eip";
 
 // TODO: Replace placeholderData with OrbitDB integration for EIPs
