@@ -68,8 +68,6 @@ program
         privKeyBuffer = privKeyBuffer.subarray(0, 32);
       }
     }
-    const privateKey = await generateKeyPairFromSeed("Ed25519", new Uint8Array(privKeyBuffer));
-
 
     const seed = new Uint8Array(privKeyBuffer || []);
     console.log('seed', seed.length);
@@ -124,34 +122,46 @@ program
     });
 
     console.log(libp2p.getMultiaddrs());
-    // const DBFINDER_NAME = "DBFinder";
+    const DBFINDER_NAME = "DBFinder";
 
     const helia = await createHelia({ libp2p });
-    // const DBFinder = await orbitdb.open(DBFINDER_NAME, { type: 'keyvalue', AccessController: IPFSAccessController({write: [orbitdb.identity.id]}) });
-    // const eip1 = await orbitdb.open("eip1", { type: 'documents', AccessController: IPFSAccessController({write: [orbitdb.identity.id]}) });
+    const orbitdb = await createOrbitDB({ ipfs: helia, id: "userA" });
+    const DBFinder = await orbitdb.open(DBFINDER_NAME, { type: 'keyvalue', AccessController: IPFSAccessController({write: [orbitdb.identity.id]}) });
+    console.log('DBFinder address', DBFinder.address.toString());
+    DBFinder.events.on('update', async (entry: any) => {
+      console.log('Database update:', entry.payload.value);
+    });
+    DBFinder.events.on('error', (error: any) => {
+      console.error('Database error:', error);
+    });
 
+    // await DBFinder.put("eip2", "eip2Addr");
+    // const eip1 = await orbitdb.open("eip1", { type: 'documents', AccessController: IPFSAccessController({write: [orbitdb.identity.id]}) });
+    // console.log('eip1 address', eip1.address.toString());
+
+    // const eip1second = await orbitdb.open(await DBFinder.get("eip1"));
+    // console.log('eip1second address', eip1second.address.toString());
     // const eip1Addr = eip1.address.toString();
     // await DBFinder.put("eip1", eip1Addr);
     // console.log('eip1Addr', eip1Addr);
     // await eip1.put({ _id: "123", name: "hello world title", description: "hello world description" });
     // console.log('eip1Addr', eip1Addr);
 
-    const orbitdb = await createOrbitDB({ ipfs: helia, id: "userA" });
     console.log('id', orbitdb.identity.id);
-    const db = await orbitdb.open('db-jan-kiwi-1', { type: 'documents', AccessController: IPFSAccessController({write: [orbitdb.identity.id]}) });
-    db.events.on('ready', () => {
-      console.log('Database ready');
-    });
+    // const db = await orbitdb.open('db-jan-kiwi-1', { type: 'documents', AccessController: IPFSAccessController({write: [orbitdb.identity.id]}) });
+    // db.events.on('ready', () => {
+    //   console.log('Database ready');
+    // });
 
-    db.events.on('error', (error: any) => {
-      console.error('Database error:', error);
-    });
+    // db.events.on('error', (error: any) => {
+    //   console.error('Database error:', error);
+    // });
 
-    db.events.on('update', async (entry: any) => {
-      console.log('Database update:', entry.payload.value);
-    });
+    // db.events.on('update', async (entry: any) => {
+    //   console.log('Database update:', entry.payload.value);
+    // });
     
-    console.log('Database address:', db.address.toString());
+    // console.log('Database address:', db.address.toString());
     console.log('Node is running. Press Ctrl+C to stop.');
 
     // Keep the process running

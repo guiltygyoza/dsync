@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 declare type Identity = any;
 declare type DatabaseInstance<T = any> = {
     address: string;
