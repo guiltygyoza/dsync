@@ -4,5 +4,16 @@
 
 ```console
 pnpm install
-pnpm run dev
+```
+
+Run frontend:
+
+```console
+cd frontend && pnpm dev
+```
+
+Run node:
+
+```console
+cd node && pnpm build && pnpm start
 ```
