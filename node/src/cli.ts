@@ -243,9 +243,7 @@ program
 		//   console.log('Database update:', entry.payload.value);
 		// });
 
-		// console.log('Database address:', db.address.toString());
-		console.log("Node is running. Press Ctrl+C to stop.");
-
+		// console.log('Database address:', db.address.toString())
 		const app = express();
 
 		app.use((req: Request, res: Response, next: NextFunction) => {
@@ -272,6 +270,8 @@ program
 		app.listen(WEBHOOK_PORT, () => {
 			console.log(`Webhook server listening on port ${WEBHOOK_PORT}`);
 		});
+
+		console.log("Node is running. Press Ctrl+C to stop.");
 
 		// Keep the process running
 		process.on("SIGINT", async () => {
