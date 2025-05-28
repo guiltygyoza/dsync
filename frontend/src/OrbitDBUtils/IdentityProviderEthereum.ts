@@ -50,7 +50,7 @@ const OrbitDBIdentityProviderEthereum =
 		};
 	};
 
-OrbitDBIdentityProviderEthereum.type = TYPE;
 OrbitDBIdentityProviderEthereum.verifyIdentity = verifyIdentity;
+OrbitDBIdentityProviderEthereum.type = TYPE;
 
 export default OrbitDBIdentityProviderEthereum;

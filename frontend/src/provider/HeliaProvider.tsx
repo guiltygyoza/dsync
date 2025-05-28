@@ -6,7 +6,7 @@ import { gossipsub } from "@chainsafe/libp2p-gossipsub";
 import { createDelegatedRoutingV1HttpApiClient } from "@helia/delegated-routing-v1-http-api-client";
 import { bootstrap } from "@libp2p/bootstrap";
 import { delegatedHTTPRoutingDefaults } from "@helia/routers";
-import { createOrbitDB, IPFSAccessController } from "@orbitdb/core";
+import { createOrbitDB, IPFSAccessController, useIdentityProvider } from "@orbitdb/core";
 import { uPnPNAT } from "@libp2p/upnp-nat";
 import { ipnsSelector } from "ipns/selector";
 import { ipnsValidator } from "ipns/validator";
@@ -81,8 +81,15 @@ export const HeliaProvider = ({ children }: { children: React.ReactNode }) => {
 				signMessage: async (message: string) => signMessageAsync({ message }),
 			};
 			const identityProviderInstance = OrbitDBIdentityProviderEthereum({ wallet: walletFacade });
-			setOrbitDBIdentity(() => identityProviderInstance); // Store the provider function itself
+			// Wrap the function in an arrow function to ensure React stores the function itself, not its return value.
+			setOrbitDBIdentity(() => identityProviderInstance);
 			console.log("OrbitDB Identity Provider configured with address:", address);
+			// Log the type of instance to confirm it's a function
+			console.log("identityProviderInstance is a:", typeof identityProviderInstance);
+			// If you want to log the resolved value, do it carefully:
+			// identityProviderInstance().then(resolvedIdentity => {
+			//  console.log("Resolved identity from instance:", resolvedIdentity);
+			// }).catch(err => console.error("Error resolving identityProviderInstance for logging:", err));
 		} else {
 			setOrbitDBIdentity(null);
 			console.log("OrbitDB Identity Provider cleared.");
@@ -90,6 +97,8 @@ export const HeliaProvider = ({ children }: { children: React.ReactNode }) => {
 	}, [isConnected, address, signMessageAsync]);
 
 	const startHelia = useCallback(async () => {
+		useIdentityProvider(OrbitDBIdentityProviderEthereum);
+
 		if (helia) {
 			console.info("helia already started");
 		} else if (window.helia) {
@@ -174,6 +183,7 @@ export const HeliaProvider = ({ children }: { children: React.ReactNode }) => {
 	const testOrbitDB = useCallback(async () => {
 		if (helia && !te) {
 			console.log("Attempting OrbitDB test...");
+			console.log("orbitDBIdentity", orbitDBIdentity);
 			if (!orbitDBIdentity && isConnected) {
 				console.warn(
 					"OrbitDB test: Wallet connected, but identity provider not yet configured. Retrying soon or check logs."
@@ -188,10 +198,17 @@ export const HeliaProvider = ({ children }: { children: React.ReactNode }) => {
 
 			try {
 				console.log("Creating OrbitDB instance...");
+				if (orbitDBIdentity) {
+					console.log("[testOrbitDB] orbitDBIdentity is truthy, attempting to call it.");
+					console.log("orbitDBIdentity type from resolved call", await (await orbitDBIdentity()).getId());
+				}
 				const orbitdb = await createOrbitDB({
 					ipfs: helia,
-					identityProvider: orbitDBIdentity,
+					identity: {
+						provider: orbitDBIdentity,
+					},
 				});
+				console.log(orbitdb.identity);
 				console.log("orbitdb identity id", orbitdb.identity.id);
 				console.log("OrbitDB instance created:", orbitdb);
 
