@@ -15,5 +15,7 @@ cd frontend && pnpm dev
 Run node:
 
 ```console
-cd node && pnpm build && pnpm start
+cd node
+cp .env.example .env # fill in the env variables
+pnpm build && pnpm start
 ```

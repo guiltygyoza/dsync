@@ -33,12 +33,14 @@ import type { Request, Response, NextFunction } from "express";
 import { Alchemy, Network } from "alchemy-sdk";
 import crypto from "crypto";
 import { libp2pRouting } from "@helia/routers";
+import * as dotenv from "dotenv";
+
+// add a cmd to add a orbit db id to the access controller of the given db addr
 
 interface RunOptions {
 	tcpPort?: number;
 	wsPort?: number;
 	webrtcPort?: number;
-	privKeySeed?: string;
 }
 
 const bootstrapConfig = {
@@ -52,7 +54,75 @@ const bootstrapConfig = {
 
 const program = new Command();
 
-program.name("orbitdb-cli").description("CLI for interacting with OrbitDB").version("1.0.0");
+program.name("dsync-cli").description("CLI for interacting with Dsync").version("1.0.0");
+
+dotenv.config();
+
+async function startOrbitDB(addresses: string[] = []) {
+	let privKeyBuffer: Buffer | undefined;
+	if (process.env.PRIVATE_KEY_SEED) {
+		privKeyBuffer = Buffer.from(process.env.PRIVATE_KEY_SEED, "utf-8");
+
+		if (privKeyBuffer.length < 32) {
+			const padding = Buffer.alloc(32 - privKeyBuffer.length);
+			privKeyBuffer = Buffer.concat([privKeyBuffer, padding]);
+		} else if (privKeyBuffer.length > 32) {
+			privKeyBuffer = privKeyBuffer.subarray(0, 32);
+		}
+	} else {
+		console.error("PRIVATE_KEY_SEED is not set");
+		process.exit(1);
+	}
+
+	const seed = new Uint8Array(privKeyBuffer || []);
+	const privateKey = await generateKeyPairFromSeed("Ed25519", seed);
+
+	const libp2p = await createLibp2p({
+		privateKey,
+		addresses: {
+			listen: addresses,
+		},
+		peerDiscovery: [bootstrap(bootstrapConfig), mdns()],
+		connectionEncrypters: [noise(), tls()],
+		connectionGater: {
+			denyDialMultiaddr: () => false,
+		},
+		streamMuxers: [yamux()],
+		services: {
+			dht: kadDHT({
+				validators: { ipns: ipnsValidator },
+				selectors: { ipns: ipnsSelector },
+			}),
+			ping: ping(),
+			dcutr: dcutr(),
+			identify: identify(),
+			identifyPush: identifyPush(),
+			pubsub: gossipsub({ allowPublishToZeroTopicPeers: true }),
+			autonat: autoNAT(),
+			autoTLS: autoTLS(),
+			upnp: uPnPNAT(),
+			relay: circuitRelayServer(),
+			keychain: keychain({}),
+		},
+		transports: [circuitRelayTransport(), webRTC(), webRTCDirect(), webSockets({ filter: filters.all }), tcp()],
+		...(privKeyBuffer && { identity: { privKey: privKeyBuffer } }),
+	});
+	// REALLLY IMPORTANT:
+	const blockstore = new LevelBlockstore("./ipfs");
+	const helia = await createHelia({ libp2p, blockstore, routers: [libp2pRouting(libp2p)] });
+	const orbitdb = await createOrbitDB({ ipfs: helia, id: "bootstrap", blockstore });
+
+	return { orbitdb, libp2p };
+}
+
+program
+	.command("get-orbitdb-id")
+	.description("Get the orbit db id")
+	.action(async () => {
+		const { orbitdb } = await startOrbitDB();
+		console.log("orbitdb id", orbitdb.identity.id);
+		process.exit(0);
+	});
 
 program
 	.command("run")
@@ -60,30 +130,11 @@ program
 	.option("-t, --tcp-port <port>", "TCP port to listen on")
 	.option("-w, --ws-port <port>", "WebSocket port to listen on")
 	.option("-r, --webrtc-port <port>", "WebRTC port to listen on")
-	.option("-k, --priv-key-seed <seed>", "Private key seed")
 	.action(async (options: RunOptions) => {
-		let privKeyBuffer: Buffer | undefined;
-
-		if (options.privKeySeed) {
-			privKeyBuffer = Buffer.from(options.privKeySeed, "utf-8");
-
-			if (privKeyBuffer.length < 32) {
-				const padding = Buffer.alloc(32 - privKeyBuffer.length);
-				privKeyBuffer = Buffer.concat([privKeyBuffer, padding]);
-			} else if (privKeyBuffer.length > 32) {
-				privKeyBuffer = privKeyBuffer.subarray(0, 32);
-			}
-		}
-
-		const seed = new Uint8Array(privKeyBuffer || []);
-		console.log("seed", seed.length);
-
-		const privateKey = await generateKeyPairFromSeed("Ed25519", seed);
-
 		const ALCHEMY_API_KEY = process.env.ALCHEMY_API_KEY || undefined;
 		const ALCHEMY_WEBHOOK_SIGNING_SECRET = process.env.ALCHEMY_WEBHOOK_SIGNING_SECRET || undefined;
 		const EIP_MANAGER_CONTRACT_ADDRESS = process.env.EIP_MANAGER_CONTRACT_ADDRESS || undefined;
-		const WEBHOOK_PORT = process.env.WEBHOOK_PORT || 3000;
+		const WEBHOOK_PORT = process.env.WEBHOOK_PORT || 3001;
 
 		if (!ALCHEMY_API_KEY || !EIP_MANAGER_CONTRACT_ADDRESS) {
 			console.warn(
@@ -93,11 +144,6 @@ program
 		if (!ALCHEMY_WEBHOOK_SIGNING_SECRET) {
 			console.warn("Remember to set your ALCHEMY_WEBHOOK_SIGNING_SECRET for webhook verification.");
 		}
-
-		const alchemy = new Alchemy({
-			apiKey: ALCHEMY_API_KEY,
-			network: Network.ETH_SEPOLIA,
-		});
 
 		const addresses = {
 			listen: [
@@ -113,45 +159,12 @@ program
 			],
 		};
 
-		const libp2p = await createLibp2p({
-			privateKey,
-			addresses,
-			peerDiscovery: [bootstrap(bootstrapConfig), mdns()],
-			connectionEncrypters: [noise(), tls()],
-			connectionGater: {
-				denyDialMultiaddr: () => false,
-			},
-			streamMuxers: [yamux()],
-			services: {
-				dht: kadDHT({
-					validators: { ipns: ipnsValidator },
-					selectors: { ipns: ipnsSelector },
-				}),
-				ping: ping(),
-				dcutr: dcutr(),
-				identify: identify(),
-				identifyPush: identifyPush(),
-				pubsub: gossipsub({ allowPublishToZeroTopicPeers: true }),
-				autonat: autoNAT(),
-				autoTLS: autoTLS(),
-				upnp: uPnPNAT(),
-				relay: circuitRelayServer(),
-				keychain: keychain({}),
-			},
-			transports: [circuitRelayTransport(), webRTC(), webRTCDirect(), webSockets({ filter: filters.all }), tcp()],
-			...(privKeyBuffer && { identity: { privKey: privKeyBuffer } }),
+		const alchemy = new Alchemy({
+			apiKey: ALCHEMY_API_KEY,
+			network: Network.ETH_SEPOLIA,
 		});
 
-		// add a cmd to get the orbit db id,
-		// add a cmd to create a db and get the address,
-		// add a cmd to add a orbit db id to the access controller of the given db addr
-
-		program
-			.command("get-orbitdb-id")
-			.description("Get the orbit db id")
-			.action(async () => {
-				console.log("orbitdb id", orbitdb.identity.id);
-			});
+		const { orbitdb, libp2p } = await startOrbitDB(addresses.listen);
 		console.log(libp2p.getMultiaddrs());
 		console.log(libp2p.peerId);
 		libp2p.addEventListener("peer:connect", (peerId) => {
@@ -168,9 +181,6 @@ program
 
 		const DBFINDER_NAME = "/orbitdb/zdpuAwHvrRnh7PzhE89FUUM2eMrdpwGs8SRPS41JYiSLGoY8u";
 
-		const blockstore = new LevelBlockstore("./ipfs");
-		const helia = await createHelia({ libp2p, blockstore, routers: [libp2pRouting(libp2p)] });
-		const orbitdb = await createOrbitDB({ ipfs: helia, id: "userC", blockstore });
 		console.log("orbitdb id", orbitdb.identity.id);
 		const DBFinder = await orbitdb.open(DBFINDER_NAME, {
 			type: "keyvalue",
