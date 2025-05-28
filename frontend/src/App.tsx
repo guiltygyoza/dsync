@@ -16,7 +16,7 @@ function getInitialTheme(): "light" | "dark" {
 
 function App() {
 	const [theme, setTheme] = useState<"light" | "dark">(getInitialTheme());
-  const { error, starting } = useHelia();
+	const { error, starting } = useHelia();
 	useEffect(() => {
 		localStorage.setItem(THEME_KEY, theme);
 		if (theme === "dark") {
@@ -33,28 +33,26 @@ function App() {
 	};
 
 	return (
-			<Router>
-				<Navbar theme={theme} toggleTheme={toggleTheme} />
-				<main style={{ padding: "0 20px" }} className={theme}>
-					<Routes>
-						<Route path="/" element={<HomePage />} />
-						<Route path="/eips/:eipId" element={<EIPPage />} />
-						<Route path="/eips" element={<EIPListPage />} />
-						<Route path="/eips/new" element={<CreateEIPPage />} />
-					</Routes>
-          <div
-              id="heliaStatus"
-              style={{
-                border: `4px solid ${
-                  error ? "red" : starting ? "yellow" : "green"
-                }`,
-                paddingBottom: "4px",
-              }}
-            >
-              Helia Status
-            </div>
-				</main>
-			</Router>
+		<Router>
+			<Navbar theme={theme} toggleTheme={toggleTheme} />
+			<main style={{ padding: "0 20px" }} className={theme}>
+				<Routes>
+					<Route path="/" element={<HomePage />} />
+					<Route path="/eips/:eipId" element={<EIPPage />} />
+					<Route path="/eips" element={<EIPListPage />} />
+					<Route path="/eips/new" element={<CreateEIPPage />} />
+				</Routes>
+				<div
+					id="heliaStatus"
+					style={{
+						border: `4px solid ${error ? "red" : starting ? "yellow" : "green"}`,
+						paddingBottom: "4px",
+					}}
+				>
+					Helia Status
+				</div>
+			</main>
+		</Router>
 	);
 }
 

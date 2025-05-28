@@ -1,26 +1,26 @@
 {
-    "name": "@dsync/services",
-    "version": "1.0.0",
-    "description": "Services for DSync",
-    "main": "index.js",
-    "type": "module",
-    "scripts": {
-        "build": "tsc",
-        "generate": "protons ./src/pb/message.proto"
-    },
-    "license": "MIT",
-    "dependencies": {
-        "@libp2p/interface": "^2.10.1",
-        "@libp2p/interface-internal": "^2.3.13",
-        "@multiformats/multiaddr": "^12.4.0",
-        "@orbitdb/core": "2.5.0",
-        "it-byte-stream": "^2.0.2",
-        "it-protobuf-stream": "^2.0.2",
-        "libp2p": "2.8.5",
-        "protons-runtime": "^5.5.0",
-        "uint8arraylist": "^2.4.8"
-    },
-    "devDependencies": {
-        "protons": "^7.6.1"
-    }
+	"name": "@dsync/services",
+	"version": "1.0.0",
+	"description": "Services for DSync",
+	"main": "index.js",
+	"type": "module",
+	"scripts": {
+		"build": "tsc",
+		"generate": "protons ./src/pb/message.proto"
+	},
+	"license": "MIT",
+	"dependencies": {
+		"@libp2p/interface": "^2.10.1",
+		"@libp2p/interface-internal": "^2.3.13",
+		"@multiformats/multiaddr": "^12.4.0",
+		"@orbitdb/core": "2.5.0",
+		"it-byte-stream": "^2.0.2",
+		"it-protobuf-stream": "^2.0.2",
+		"libp2p": "2.8.5",
+		"protons-runtime": "^5.5.0",
+		"uint8arraylist": "^2.4.8"
+	},
+	"devDependencies": {
+		"protons": "^7.6.1"
+	}
 }

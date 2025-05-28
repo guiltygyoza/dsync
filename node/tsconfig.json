@@ -1,21 +1,14 @@
 {
-    "extends": "../tsconfig.base.json",
-    "compilerOptions": {
-        "outDir": "./dist",
-        "rootDir": "./src",
-        "target": "ES2022",
-        "lib": [
-            "ES2023"
-        ],
-        "module": "NodeNext",
-        "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
-        "moduleResolution": "NodeNext",
-    },
-    "include": [
-        "src/**/*"
-    ],
-    "exclude": [
-        "node_modules",
-        "dist"
-    ]
+	"extends": "../tsconfig.base.json",
+	"compilerOptions": {
+		"outDir": "./dist",
+		"rootDir": "./src",
+		"target": "ES2022",
+		"lib": ["ES2023"],
+		"module": "NodeNext",
+		"tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
+		"moduleResolution": "NodeNext"
+	},
+	"include": ["src/**/*"],
+	"exclude": ["node_modules", "dist"]
 }

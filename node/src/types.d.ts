@@ -49,10 +49,10 @@
 //             accessController?: OrbitDBAccessController; // global placeholder
 //             [key: string]: any; // other options
 //         }): Promise<DatabaseInstance<T>>;
-        
+
 //         stop: () => Promise<void>;
 //         disconnect: () => Promise<void>;
-        
+
 //         // Expose other core OrbitDB methods if necessary for the test or public API
 //         // For example:
 //         // static isValidAddress(address: string): boolean;
@@ -84,7 +84,7 @@
 //         iterator: (options?: any) => EventIterator<OrbitDBEntry & { payload: { value: T } }>;
 //         all: () => Promise<(OrbitDBEntry & { payload: { value: T } })[]>;
 //     };
-    
+
 //     // The actual exported store types might be the constructor functions or factories
 //     // For the purpose of the test, we primarily care that `orbitdb.open` is typed.
 //     // The test uses `Documents` and `KeyValue` as imported types, but they are likely
@@ -99,7 +99,7 @@
 //     // So, `DatabaseInstance` should cover this. The specific types like `DocumentsStore` are for more precise typing.
 //     // The test file does `import { createOrbitDB, Documents, KeyValue } from 'orbitdb';`
 //     // This means `Documents` and `KeyValue` need to be exported types.
-    
+
 //     export type Documents<T = any> = DocumentsStore<T>;
 //     export type KeyValue<K = string, V = any> = KeyValueStore<K, V>;
 

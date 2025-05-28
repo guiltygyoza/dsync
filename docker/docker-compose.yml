@@ -1,26 +1,26 @@
 services:
-  proxy:
-    container_name: proxy
-    image: valian/docker-nginx-auto-ssl
-    restart: on-failure
-    ports:
-      - 80:80
-      - 443:443
-    volumes:
-      - ssl_data:/etc/resty-auto-ssl
-    environment:
-      FORCE_HTTPS: "true"
-      SITES: whydidyoustop.com=http://5.75.178.220:41597
+    proxy:
+        container_name: proxy
+        image: valian/docker-nginx-auto-ssl
+        restart: on-failure
+        ports:
+            - 80:80
+            - 443:443
+        volumes:
+            - ssl_data:/etc/resty-auto-ssl
+        environment:
+            FORCE_HTTPS: "true"
+            SITES: whydidyoustop.com=http://5.75.178.220:41597
 
-  node:
-    container_name: node
-    image: dsync/node
-    restart: on-failure
-    ports:
-      - 9999:9999
-    volumes:
-      - ./node:/app
-    command: run -w 9999 -k 123
+    node:
+        container_name: node
+        image: dsync/node
+        restart: on-failure
+        ports:
+            - 9999:9999
+        volumes:
+            - ./node:/app
+        command: run -w 9999 -k 123
 
 volumes:
-  ssl_data:
+    ssl_data:

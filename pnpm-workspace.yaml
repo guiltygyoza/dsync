@@ -1,4 +1,4 @@
 packages:
-  - "frontend"
-  - "services"
-  - "node"
+    - "frontend"
+    - "services"
+    - "node"

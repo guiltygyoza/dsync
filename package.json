@@ -1,38 +1,44 @@
 {
-  "name": "dsync",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "license": "MIT",
-  "scripts": {
-    "build:frontend": "pnpm build --filter @dsync/frontend",
-    "lint": "eslint .",
-    "build:docker": "docker build -t dsync/node -f docker/Dockerfile ."
-  },
-  "workspaces": [
-    "node",
-    "frontend",
-    "services"
-  ],
-  "devDependencies": {
-    "@eslint/js": "9.27.0",
-    "eslint": "9.27.0",
-    "eslint-plugin-react-hooks": "5.2.0",
-    "eslint-plugin-react-refresh": "0.4.20",
-    "globals": "16.1.0",
-    "typescript": "5.8.3",
-    "typescript-eslint": "8.32.1"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "@ipshipyard/node-datachannel",
-      "bufferutil",
-      "classic-level",
-      "esbuild",
-      "keccak",
-      "pprof",
-      "protobufjs",
-      "utf-8-validate"
-    ]
-  }
+	"name": "dsync",
+	"private": true,
+	"version": "0.0.0",
+	"type": "module",
+	"license": "MIT",
+	"scripts": {
+		"build:frontend": "pnpm build --filter @dsync/frontend",
+		"lint": "eslint .",
+		"lint:fix": "eslint . --fix",
+		"format": "prettier --write .",
+		"build:docker": "docker build -t dsync/node -f docker/Dockerfile ."
+	},
+	"workspaces": [
+		"node",
+		"frontend",
+		"services"
+	],
+	"devDependencies": {
+		"@eslint/js": "9.27.0",
+		"eslint": "9.27.0",
+		"eslint-plugin-react-hooks": "5.2.0",
+		"eslint-plugin-react-refresh": "0.4.20",
+		"eslint-plugin-unused-imports": "^4.1.4",
+		"eslint-config-prettier": "^10.1.5",
+		"eslint-plugin-prettier": "^5.4.0",
+		"prettier": "^3.5.3",
+		"globals": "16.1.0",
+		"typescript": "5.8.3",
+		"typescript-eslint": "8.32.1"
+	},
+	"pnpm": {
+		"onlyBuiltDependencies": [
+			"@ipshipyard/node-datachannel",
+			"bufferutil",
+			"classic-level",
+			"esbuild",
+			"keccak",
+			"pprof",
+			"protobufjs",
+			"utf-8-validate"
+		]
+	}
 }
