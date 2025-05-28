@@ -7,6 +7,7 @@ import { createOrbitDB, IPFSAccessController } from '@orbitdb/core';
 import { createLibp2p } from 'libp2p';
 import { noise } from '@chainsafe/libp2p-noise';
 import { yamux } from '@chainsafe/libp2p-yamux';
+import { LevelBlockstore } from 'blockstore-level';
 import { autoTLS } from '@ipshipyard/libp2p-auto-tls';
 import { autoNAT } from '@libp2p/autonat';
 import { bootstrap } from '@libp2p/bootstrap';
@@ -31,6 +32,7 @@ import express from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import { Alchemy, Network } from 'alchemy-sdk';
 import crypto from 'crypto';
+import { libp2pRouting } from '@helia/routers';
 
 interface RunOptions {
     tcpPort?: number;
@@ -41,8 +43,10 @@ interface RunOptions {
 
 const bootstrapConfig = {
     list: [
-        "/ip4/157.90.152.156/tcp/36843/ws/p2p/12D3KooWB1J5ksLv96GTyH5Ugp1a8CDpLr5XGXpNHwWorTx95PDc",
-        "/ip4/157.90.152.156/tcp/36437/p2p/12D3KooWB1J5ksLv96GTyH5Ugp1a8CDpLr5XGXpNHwWorTx95PDc",
+        // "/ip4/157.90.152.156/tcp/36843/ws/p2p/12D3KooWB1J5ksLv96GTyH5Ugp1a8CDpLr5XGXpNHwWorTx95PDc",
+        // "/ip4/157.90.152.156/tcp/36437/p2p/12D3KooWB1J5ksLv96GTyH5Ugp1a8CDpLr5XGXpNHwWorTx95PDc",
+        "/ip4/86.252.78.192/tcp/9999/ws/p2p/12D3KooWJ3EqVf1X6QoBkeUSoRZyg8S11g8QVeyE8guVudedNZqv",
+        // "/ip4/86.252.78.192/tcp/54395/p2p/12D3KooWJ3EqVf1X6QoBkeUSoRZyg8S11g8QVeyE8guVudedNZqv",
     ],
 };
 
@@ -98,13 +102,15 @@ program
 
     const addresses = {
       listen: [
-        options.tcpPort ? `/ip4/0.0.0.0/tcp/${options.tcpPort}` : '/ip4/0.0.0.0/tcp/0',
-        options.wsPort ? `/ip4/0.0.0.0/tcp/${options.wsPort}/ws` : '/ip4/0.0.0.0/tcp/0/ws',
-        options.webrtcPort ? `/ip4/0.0.0.0/udp/${options.webrtcPort}/webrtc-direct` : '/ip4/0.0.0.0/udp/0/webrtc-direct',
-        '/ip6/::/tcp/0',
-        '/ip6/::/tcp/0/ws',
-        '/ip6/::/udp/0/webrtc-direct',
+        //options.tcpPort ? `/ip4/0.0.0.0/tcp/${options.tcpPort}` : '/ip4/0.0.0.0/tcp/0',
+        //options.wsPort ? `/ip4/0.0.0.0/tcp/${options.wsPort}/ws` : '/ip4/0.0.0.0/tcp/0/ws',
+        //options.webrtcPort ? `/ip4/0.0.0.0/udp/${options.webrtcPort}/webrtc-direct` : '/ip4/0.0.0.0/udp/0/webrtc-direct',
+        //'/ip6/::/tcp/0',
+        //'/ip6/::/tcp/0/ws',
+        //'/ip6/::/udp/0/webrtc-direct',
         '/p2p-circuit',
+        '/webrtc',
+        '/webrtc-direct'
       ],
     };
 
@@ -143,12 +149,36 @@ program
        ...(privKeyBuffer && { identity: { privKey: privKeyBuffer } }),
     });
 
-    console.log(libp2p.getMultiaddrs());
-    const DBFINDER_NAME = "DBFinder";
+    // add a cmd to get the orbit db id,
+    // add a cmd to create a db and get the address,
+    // add a cmd to add a orbit db id to the access controller of the given db addr
 
-    const helia = await createHelia({ libp2p });
-    const orbitdb = await createOrbitDB({ ipfs: helia, id: "userA" });
-    const DBFinder = await orbitdb.open(DBFINDER_NAME, { type: 'keyvalue', AccessController: IPFSAccessController({write: [orbitdb.identity.id]}) });
+    program.command('get-orbitdb-id')
+      .description('Get the orbit db id')
+      .action(async () => {
+        console.log('orbitdb id', orbitdb.identity.id);
+      });
+    console.log(libp2p.getMultiaddrs());
+    console.log(libp2p.peerId);
+    libp2p.addEventListener('peer:connect', (peerId) => {
+      console.log('peer:connect', peerId.detail);
+    });
+
+    libp2p.addEventListener('transport:listening', (peerId) => {
+      console.log('transport:listening', libp2p.getMultiaddrs());
+    });
+
+    libp2p.addEventListener('peer:disconnect', (peerId) => {
+      console.log('peer:disconnect', peerId.detail);
+    });
+    
+    const DBFINDER_NAME = "/orbitdb/zdpuAwHvrRnh7PzhE89FUUM2eMrdpwGs8SRPS41JYiSLGoY8u"
+
+    const blockstore = new LevelBlockstore('./ipfs')
+    const helia = await createHelia({ libp2p, blockstore, routers: [libp2pRouting(libp2p)] });
+    const orbitdb = await createOrbitDB({ ipfs: helia, id: "userC", blockstore });
+    console.log('orbitdb id', orbitdb.identity.id);
+    const DBFinder = await orbitdb.open(DBFINDER_NAME, { type: 'keyvalue', AccessController: IPFSAccessController({write: ["02ac6a344f5cdceb2c4ccb78596ca3891d31861e803e429f624e0f65a402371ab6", "02ac6a344f5cdceb2c4ccb78596ca3891d31861e803e429f624e0f65a402371ab6"]}) });
     console.log('DBFinder address', DBFinder.address.toString());
     DBFinder.events.on('update', async (entry: any) => {
       console.log('Database update:', entry.payload.value);
@@ -157,7 +187,26 @@ program
       console.error('Database error:', error);
     });
 
-    // await DBFinder.put("eip2", "eip2Addr");
+    DBFinder.events.on('join', async (peerId, heads) => {
+      // The peerId of the ipfs1 node.
+      console.log('join', peerId);
+    })
+
+    DBFinder.events.on('close', async (peerId, heads) => {
+      // The peerId of the ipfs1 node.
+      console.log('close', peerId);
+    })
+    for await (const record of DBFinder.iterator()) {
+      console.log('record1', record)
+    }
+
+    // what is left:
+    // - add commenters array to the smart contract, create access controller for that
+    // - create alchemy webhook and listen in the node
+    // - make the db structure, in node create doc db for new eip
+    // - record new users connecting wallets
+
+
     // const eip1 = await orbitdb.open("eip1", { type: 'documents', AccessController: IPFSAccessController({write: [orbitdb.identity.id]}) });
     // console.log('eip1 address', eip1.address.toString());
 
