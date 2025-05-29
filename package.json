@@ -5,6 +5,7 @@
 	"type": "module",
 	"license": "MIT",
 	"scripts": {
+		"build": "pnpm build:frontend",
 		"build:frontend": "pnpm build --filter @dsync/frontend",
 		"lint": "eslint .",
 		"lint:fix": "eslint . --fix",
