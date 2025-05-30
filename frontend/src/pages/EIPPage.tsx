@@ -1,8 +1,6 @@
-import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams } from "react-router-dom";
-import type { IEIP } from "../types/eip";
-import type { IComment } from "../types/comment";
-import { EIP_STATUS } from "../constants/eip";
+import { type IEIP, type IComment, EIP_STATUS } from "@dsync/types";
 
 const isEIPEditable = (status: EIP_STATUS): boolean => {
 	return [EIP_STATUS.DRAFT, EIP_STATUS.REVIEW, EIP_STATUS.LAST_CALL].includes(status);

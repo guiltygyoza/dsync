@@ -5,8 +5,8 @@
 	"type": "module",
 	"license": "MIT",
 	"scripts": {
-		"build": "pnpm build:frontend",
-		"build:frontend": "cd frontend && pnpm build",
+		"build": "pnpm -r build",
+		"build:frontend": "pnpm --filter frontend build",
 		"lint": "eslint .",
 		"lint:fix": "eslint . --fix",
 		"format": "prettier --write .",

@@ -1,13 +1,16 @@
-import React, { useState, useMemo, useContext, useEffect } from "react";
-import type { IEIP } from "../types/eip";
-import type { IComment } from "../types/comment";
-import { EIP_CATEGORY, EIP_STATUS, AllEIPCategoryValues, AllEIPStatusValues } from "../constants/eip";
+import { useState, useMemo, useContext, useEffect } from "react";
+import {
+	type IEIP,
+	type IComment,
+	EIP_CATEGORY,
+	EIP_STATUS,
+	AllEIPCategoryValues,
+	AllEIPStatusValues,
+} from "@dsync/types";
 import EipDetailView from "./EipDetailView";
 import "../EipDisplayTable.css";
 import { useNavigate } from "react-router-dom";
 import { HeliaContext, DBFINDER_ADDRESS } from "../provider/HeliaProvider";
-
-// const allEips: IEIP[] = placeholderEIPs; // We will replace this with dbEips
 
 type GroupedEIPs = Map<EIP_CATEGORY, Map<EIP_STATUS, IEIP[]>>;
 

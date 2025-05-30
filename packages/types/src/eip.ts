@@ -22,3 +22,16 @@ export const AllEIPStatusValues = Object.values(EIP_STATUS);
 
 // Helper function to get all EIP_CATEGORY values
 export const AllEIPCategoryValues = Object.values(EIP_CATEGORY);
+
+export interface IEIP {
+	id: number;
+	title: string;
+	description: string;
+	content: string; // Markdown
+	status: EIP_STATUS;
+	category: EIP_CATEGORY;
+	author: string;
+	createdAt: Date;
+	updatedAt: Date;
+	requires: number[] | null;
+}

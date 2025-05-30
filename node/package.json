@@ -47,7 +47,8 @@
 		"express": "^5.1.0",
 		"helia": "5.4.1",
 		"ipns": "10.0.2",
-		"libp2p": "2.8.5"
+		"libp2p": "2.8.5",
+		"@dsync/types": "workspace:*"
 	},
 	"devDependencies": {
 		"@types/node": "22.15.19"

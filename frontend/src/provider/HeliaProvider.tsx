@@ -146,13 +146,13 @@ export const HeliaProvider = ({ children }: { children: React.ReactNode }) => {
 	}, [helia, writeOrbitDB, signMessageAsync, isConnected, address, writeBlockstore, setWriteOrbitDB]);
 
 	const startHelia = useCallback(async () => {
-		if (window.helia) {
-			console.info("found a windowed instance of helia, populating ...");
-			setHelia(window.helia);
-			setFs(unixfs(window.helia));
-			startingRef.current = false;
-			return;
-		}
+		// if (window.helia) {
+		// 	console.info("found a windowed instance of helia, populating ...");
+		// 	setHelia(window.helia);
+		// 	setFs(unixfs(window.helia));
+		// 	startingRef.current = false;
+		// 	return;
+		// }
 
 		if (helia || startingRef.current) return;
 		startingRef.current = true;
