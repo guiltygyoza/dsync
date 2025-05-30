@@ -1,8 +1,10 @@
-import React, { useState } from "react";
+import React, { useContext, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { HeliaContext } from "../provider/HeliaProvider";
 
 function CreateEIPForm() {
 	const navigate = useNavigate();
+	const { writeOrbitDB } = useContext(HeliaContext);
 	const [title, setTitle] = useState("");
 	const [description, setDescription] = useState("");
 	const [isSubmitting, setIsSubmitting] = useState(false);
@@ -13,6 +15,17 @@ function CreateEIPForm() {
 		if (!title.trim() || !description.trim()) {
 			setError("Title and description cannot be empty.");
 			return;
+		}
+
+		const orbitdb = await writeOrbitDB();
+		const eip = await orbitdb.open("/orbitdb/zdpuAykcSMHNmpY8rigPbCQWDnw17JGdgPs7BtxvBbfpNW39S", {
+			type: "keyvalue",
+		});
+		console.log("eip", eip.address.toString());
+		await eip.put(title, { title, description });
+
+		for await (const record of eip.iterator()) {
+			console.log("record", record);
 		}
 
 		setIsSubmitting(true);

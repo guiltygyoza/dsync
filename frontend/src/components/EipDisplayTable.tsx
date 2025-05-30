@@ -13,7 +13,7 @@ type GroupedEIPs = Map<EIP_CATEGORY, Map<EIP_STATUS, IEIP[]>>;
 
 const EipDisplayTable: React.FC = () => {
 	const navigate = useNavigate();
-	const { orbitDB } = useContext(HeliaContext);
+	const { readOrbitDB: orbitDB } = useContext(HeliaContext);
 
 	const [dbEips, setDbEips] = useState<IEIP[]>([]);
 	const [isLoadingEips, setIsLoadingEips] = useState<boolean>(true);

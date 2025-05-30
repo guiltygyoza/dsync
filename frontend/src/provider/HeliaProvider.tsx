@@ -12,7 +12,7 @@ import { ipnsSelector } from "ipns/selector";
 import { ipnsValidator } from "ipns/validator";
 import { createHelia, type DefaultLibp2pServices, type HeliaLibp2p } from "helia";
 import { createLibp2p } from "libp2p";
-import { useEffect, useState, useCallback, createContext, useMemo } from "react";
+import { useEffect, useState, useCallback, createContext, useMemo, useRef } from "react";
 import { webRTC, webRTCDirect } from "@libp2p/webrtc";
 import { webSockets } from "@libp2p/websockets";
 import { yamux } from "@chainsafe/libp2p-yamux";
@@ -45,237 +45,150 @@ export const bootstrapConfig = {
 // export const DBFINDER_ADDRESS = "/orbitdb/zdpuAwHvrRnh7PzhE89FUUM2eMrdpwGs8SRPS41JYiSLGoY8u";
 export const DBFINDER_ADDRESS = "/orbitdb/zdpuAptogZWxspXw62z2Ta3M15XxGSEJCYK7qk963byFGmGjs";
 
-// Based on the structure returned by OrbitDBIdentityProviderEthereum
-type OrbitDBIdentityInstance = () => Promise<{
-	type: string;
-	getId: () => Promise<string>;
-	signIdentity: (data: string) => Promise<string>;
-}>;
+//// Based on the structure returned by OrbitDBIdentityProviderEthereum
+//type OrbitDBIdentityInstance = () => Promise<{
+//	type: string;
+//	getId: () => Promise<string>;
+//	signIdentity: (data: string) => Promise<string>;
+//}>;
 
 export const HeliaContext = createContext<{
 	helia: HeliaLibp2p<Libp2p<DefaultLibp2pServices>> | null;
 	fs: UnixFS | null;
-	orbitDBIdentity: OrbitDBIdentityInstance | null; // Use the defined type
-	orbitDB: OrbitDB | null; // Add OrbitDB instance to context
+	readOrbitDB: OrbitDB | null; // Add OrbitDB instance to context
+	writeOrbitDB: () => Promise<OrbitDB>;
 	error: boolean;
-	starting: boolean;
 }>({
 	helia: null,
 	fs: null,
-	orbitDBIdentity: null,
-	orbitDB: null, // Initialize orbitDB as null
+	readOrbitDB: null, // Initialize orbitDB as null
+	writeOrbitDB: async () => null,
 	error: false,
-	starting: true,
 });
+
+const createWalletFacade = (address: string, signMessageAsync: (args: { message: string }) => Promise<string>) => ({
+	getAddress: async () => address,
+	signMessage: async (message: string) => await signMessageAsync({ message }),
+});
+
+const setupLibp2p = async (): Promise<Libp2p<DefaultLibp2pServices>> => {
+	return await createLibp2p<DefaultLibp2pServices>({
+		addresses: { listen: ["/p2p-circuit", "/webrtc", "/webrtc-direct"] },
+		peerDiscovery: [bootstrap(bootstrapConfig)],
+		connectionEncrypters: [noise()],
+		connectionGater: { denyDialMultiaddr: () => false },
+		metrics: devToolsMetrics(),
+		streamMuxers: [yamux()],
+		// @ts-expect-error -- .
+		services: {
+			//dht: kadDHT({
+			//  clientMode: true,
+			//  validators: {
+			//    ipns: ipnsValidator,
+			//  },
+			//  selectors: {
+			//    ipns: ipnsSelector,
+			//  },
+			//}),
+			ping: ping(),
+			dcutr: dcutr(),
+			identify: identify(),
+			identifyPush: identifyPush(),
+			pubsub: gossipsub({ allowPublishToZeroTopicPeers: true }),
+			autonat: autoNAT(),
+			//delegatedRouting: () =>
+			//  createDelegatedRoutingV1HttpApiClient(
+			//    "https://delegated-ipfs.dev",
+			//    delegatedHTTPRoutingDefaults()
+			//  ),
+		},
+		transports: [circuitRelayTransport(), webRTC(), webRTCDirect(), webSockets({ filter: filters.all })],
+	});
+};
 
 export const HeliaProvider = ({ children }: { children: React.ReactNode }) => {
 	const [helia, setHelia] = useState<HeliaLibp2p<Libp2p<DefaultLibp2pServices>> | null>(null);
 	const [fs, setFs] = useState<UnixFS | null>(null);
-	const [orbitDB, setOrbitDB] = useState<OrbitDB | null>(null);
-	const [starting, setStarting] = useState(true);
+	const [readOrbitDB, setReadOrbitDB] = useState<OrbitDB | null>(null);
+	const [writeOrbitDB, setWriteOrbitDB] = useState<OrbitDB | null>(null);
+	const startingRef = useRef(false);
 	const [error, setError] = useState(false);
-	const [te, setTe] = useState(false);
 
-	const [orbitDBIdentity, setOrbitDBIdentity] = useState<OrbitDBIdentityInstance | null>(null);
 	const { address, isConnected } = useAccount();
 	const { signMessageAsync } = useSignMessage();
-	const blockstore = useMemo(() => new LevelBlockstore("./ipfs"), []);
+	const readBlockstore = useMemo(() => new LevelBlockstore("./ipfs-read"), []);
+	const writeBlockstore = useMemo(() => new LevelBlockstore("./ipfs-write"), []);
 	useIdentityProvider(OrbitDBIdentityProviderEthereum);
 
-	useEffect(() => {
-		if (isConnected && address && signMessageAsync) {
-			const walletFacade = {
-				getAddress: async () => address,
-				// Ensure signMessageAsync is correctly bound if it relies on 'this' from useSignMessage context
-				signMessage: async (message: string) => signMessageAsync({ message }),
-			};
-			const identityProviderInstance = OrbitDBIdentityProviderEthereum({ wallet: walletFacade });
-			// Wrap the function in an arrow function to ensure React stores the function itself, not its return value.
-			setOrbitDBIdentity(() => identityProviderInstance);
-			console.log("OrbitDB Identity Provider configured with address:", address);
-			// Log the type of instance to confirm it's a function
-			console.log("identityProviderInstance is a:", typeof identityProviderInstance);
-		} else {
-			setOrbitDBIdentity(null);
-			console.log("OrbitDB Identity Provider is cleared.");
-		}
-	}, [isConnected, address, signMessageAsync]);
+	const writeOrbitDBFn = useCallback(async () => {
+		if (writeOrbitDB) return writeOrbitDB;
+		if (!address) throw new Error("Address is not set");
+		if (!signMessageAsync) throw new Error("signMessageAsync is not set");
+		if (!helia) throw new Error("helia is not set");
+		if (!writeBlockstore) throw new Error("writeBlockstore is not set");
+		if (!isConnected) throw new Error("isConnected is not set");
+
+		const walletFacade = createWalletFacade(address, signMessageAsync);
+		// identityProviderInstance -> obj {getId, signIdentity, type}
+		const identityProviderInstance = OrbitDBIdentityProviderEthereum({ wallet: walletFacade });
+		console.log("identityProviderInstance", identityProviderInstance);
+		// Wrap the function in an arrow function to ensure React stores the function itself, not its return value.
+		const orbitdb = await createOrbitDB({
+			ipfs: helia,
+			identity: {
+				provider: identityProviderInstance,
+			},
+			blockstore: writeBlockstore,
+		});
+
+		setWriteOrbitDB(orbitdb);
+		return orbitdb;
+	}, [helia, writeOrbitDB, signMessageAsync, isConnected, address, writeBlockstore, setWriteOrbitDB]);
 
 	const startHelia = useCallback(async () => {
-		if (helia) {
-			console.info("helia already started");
-		} else if (window.helia) {
+		if (window.helia) {
 			console.info("found a windowed instance of helia, populating ...");
 			setHelia(window.helia);
 			setFs(unixfs(window.helia));
-			setStarting(false);
-		} else {
-			try {
-				console.info("Starting Helia");
-				const libp2p = await createLibp2p({
-					addresses: {
-						listen: ["/p2p-circuit", "/webrtc", "/webrtc-direct"],
-					},
-					peerDiscovery: [bootstrap(bootstrapConfig)],
-					connectionEncrypters: [noise()],
-					connectionGater: {
-						denyDialMultiaddr: () => {
-							return false;
-						},
-					},
-					metrics: devToolsMetrics(),
-					streamMuxers: [yamux()],
-					services: {
-						//dht: kadDHT({
-						//  clientMode: true,
-						//  validators: {
-						//    ipns: ipnsValidator,
-						//  },
-						//  selectors: {
-						//    ipns: ipnsSelector,
-						//  },
-						//}),
-						ping: ping(),
-						dcutr: dcutr(),
-						identify: identify(),
-						identifyPush: identifyPush(),
-						pubsub: gossipsub({
-							allowPublishToZeroTopicPeers: true,
-						}),
-						autonat: autoNAT(),
-						//delegatedRouting: () =>
-						//  createDelegatedRoutingV1HttpApiClient(
-						//    "https://delegated-ipfs.dev",
-						//    delegatedHTTPRoutingDefaults()
-						//  ),
-					},
-					transports: [
-						circuitRelayTransport(),
-						webRTC(),
-						// tcp(),
-						webRTCDirect(),
-						webSockets({
-							filter: filters.all,
-						}),
-					],
-				});
-				//await libp2p.dial(
-				//  peerIdFromString(
-				//    "12D3KooWB1J5ksLv96GTyH5Ugp1a8CDpLr5XGXpNHwWorTx95PDc"
-				//  )
-				//);
-
-				const helia = await createHelia({ libp2p, blockstore, routers: [libp2pRouting(libp2p)] });
-				const orbitdb = await createOrbitDB({
-					ipfs: helia,
-					identity: {
-						provider: orbitDBIdentity,
-					},
-					blockstore,
-				});
-				// await libp2p.dial(
-				//     multiaddr("/ip4/5.75.178.220/tcp/36437/p2p/12D3KooWBkPEDWKWCdZY28Kyy7TnegeRT61obxwdpFuQ7MfcVdRQ")
-				// );
-				// @ts-expect-error -- .
-				setHelia(helia);
-				setFs(unixfs(helia));
-				setOrbitDB(orbitdb);
-				setStarting(false);
-			} catch (e) {
-				console.error(e);
-				setError(true);
-			}
+			startingRef.current = false;
+			return;
 		}
-	}, [helia, blockstore, orbitDBIdentity]);
+
+		if (helia || startingRef.current) return;
+		startingRef.current = true;
+		console.log("Starting Helia");
+
+		try {
+			const libp2p = await setupLibp2p();
+			const helia = await createHelia({ libp2p, blockstore: readBlockstore, routers: [libp2pRouting(libp2p)] });
+			const readOrbitdb = await createOrbitDB({
+				ipfs: helia,
+				blockstore: readBlockstore,
+			});
+			setHelia(helia);
+			setFs(unixfs(helia));
+			setReadOrbitDB(readOrbitdb);
+			startingRef.current = false;
+		} catch (e) {
+			console.error(e);
+			setError(true);
+		}
+	}, [helia, readBlockstore]);
 
 	useEffect(() => {
-		startHelia();
-	}, [startHelia]);
-
-	const testOrbitDB = useCallback(async () => {
-		if (helia && !te) {
-			console.log("Attempting OrbitDB test...");
-			console.log("orbitDBIdentity", orbitDBIdentity);
-			if (!orbitDBIdentity && isConnected) {
-				console.warn(
-					"OrbitDB test: Wallet connected, but identity provider not yet configured. Retrying soon or check logs."
-				);
-				return;
-			}
-			if (!orbitDBIdentity && !isConnected) {
-				console.warn(
-					"OrbitDB test: Wallet not connected, proceeding without specific identity for now (or use default)."
-				);
-			}
-
-			try {
-				console.log("Creating OrbitDB instance...");
-				if (orbitDBIdentity) {
-					console.log("[testOrbitDB] orbitDBIdentity is truthy, attempting to call it.");
-					console.log("orbitDBIdentity type from resolved call", await (await orbitDBIdentity()).getId());
-				}
-				const orbitdb = await createOrbitDB({
-					ipfs: helia,
-					identity: {
-						provider: orbitDBIdentity,
-					},
-					blockstore,
-				});
-				console.log(orbitdb.identity);
-				console.log("orbitdb identity id", orbitdb.identity.id);
-				console.log("OrbitDB instance created:", orbitdb);
-
-				const db = await orbitdb.open(DBFINDER_ADDRESS);
-				console.log("Test DB opened:", db.address);
-
-				if (orbitDBIdentity) {
-					console.log("Attempting to write to DB with identity:", db.identity.id);
-					try {
-						await db.put({ _id: `entry-${Date.now()}`, content: "Hello from identified user!" });
-						console.log("Put operation successful with identity.");
-					} catch (e) {
-						console.error("Error putting data with identity:", e);
-					}
-				} else {
-					console.log("Writing to DB without specific identity (or default).");
-					try {
-						await db.put({ _id: `entry-anon-${Date.now()}`, content: "Hello from anonymous user!" });
-						console.log("Put operation successful (anonymous/default).");
-					} catch (e) {
-						console.error("Error putting data (anonymous/default):", e);
-					}
-				}
-
-				console.log("Reading DB records...");
-				const records = [];
-				for await (const record of db.iterator({ limit: -1 })) {
-					// console.log("DB record:", record);
-					records.push(record);
-				}
-				console.log("Finished reading records. Count:", records.length);
-
-				setTe(true);
-			} catch (e) {
-				console.error("Error during OrbitDB test function:", e);
-			}
+		if (!helia && !startingRef.current) {
+			startHelia();
 		}
-	}, [helia, te, orbitDBIdentity, isConnected, blockstore]);
-
-	useEffect(() => {
-		if (helia && !starting) {
-			testOrbitDB();
-		}
-	}, [helia, starting, testOrbitDB]);
+	}, [helia, startHelia]);
 
 	return (
 		<HeliaContext.Provider
 			value={{
 				helia,
 				fs,
-				orbitDBIdentity,
-				orbitDB,
+				writeOrbitDB: writeOrbitDBFn,
+				readOrbitDB: readOrbitDB,
 				error,
-				starting,
 			}}
 		>
 			{children}
