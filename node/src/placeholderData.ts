@@ -1,130 +1,88 @@
-import { type IEIP, type IComment, EIP_STATUS, EIP_CATEGORY } from "@dsync/types";
+import { type IEIP, type IComment, AllEIPStatusValues, AllEIPCategoryValues } from "@dsync/types";
 
-// TODO: Replace placeholderData with OrbitDB integration for EIPs
-export const placeholderEIPs: IEIP[] = [
-	{
-		id: 1,
-		title: "EIP-1: Ethereum Improvement Proposal 1",
-		description: "The first EIP laying out the EIP process itself.",
-		content: "# EIP-1: Ethereum Improvement Proposal 1\n\nThe first EIP laying out the EIP process itself.",
-		status: EIP_STATUS.DRAFT,
-		category: EIP_CATEGORY.META,
-		author: "Vitalik Buterin, Martin Becze, et al.",
-		createdAt: new Date("2015-10-27T00:00:00Z"),
-		updatedAt: new Date("2015-11-20T15:00:00Z"),
-		requires: null,
-	},
-	{
-		id: 2,
-		title: "EIP-2: Another Core Proposal",
-		description: "Details about an early fork.",
-		content: "# EIP-2: Another Core Proposal\n\nDetails about an early fork.",
-		status: EIP_STATUS.REVIEW,
-		category: EIP_CATEGORY.CORE,
-		author: "Gavin Wood",
-		createdAt: new Date("2016-01-10T12:00:00Z"),
-		updatedAt: new Date("2016-01-20T18:00:00Z"),
-		requires: [1],
-	},
-	{
-		id: 3,
-		title: "EIP-3: Networking Proposal",
-		description: "A specification for network protocol changes.",
-		content: "# EIP-3: Networking Proposal\n\nA specification for network protocol changes.",
-		status: EIP_STATUS.LAST_CALL,
-		category: EIP_CATEGORY.NETWORKING,
-		author: "Developer X",
-		createdAt: new Date("2017-03-01T09:00:00Z"),
-		updatedAt: new Date("2017-03-15T11:00:00Z"),
-		requires: null,
-	},
-	{
-		id: 4,
-		title: "EIP-4: Interface Standard",
-		description: "Standardizing a contract interface.",
-		content: "# EIP-4: Interface Standard\n\nStandardizing a contract interface.",
-		status: EIP_STATUS.FINAL,
-		category: EIP_CATEGORY.INTERFACE,
-		author: "Fabian Vogelsteller",
-		createdAt: new Date("2018-05-05T14:00:00Z"),
-		updatedAt: new Date("2018-05-25T16:00:00Z"),
-		requires: null,
-	},
-	{
-		id: 5,
-		title: "EIP-5: ERC Token Standard",
-		description: "The famous ERC-20 token standard.",
-		content: "# EIP-5: ERC Token Standard\n\nThe famous ERC-20 token standard.",
-		status: EIP_STATUS.LIVING,
-		category: EIP_CATEGORY.ERC,
-		author: "Vitalik Buterin, Fabian Vogelsteller",
-		createdAt: new Date("2017-11-28T17:00:00Z"),
-		updatedAt: new Date("2019-01-01T10:00:00Z"),
-		requires: null,
-	},
-	{
-		id: 2228,
-		title: "Canonicalize the name of network ID 1 and chain ID 1",
-		description: "Clarifies the naming for the main Ethereum network.",
-		content:
-			"# EIP-2228: Canonicalize the name of network ID 1 and chain ID 1\n\nClarifies the naming for the main Ethereum network.",
-		status: EIP_STATUS.FINAL,
-		category: EIP_CATEGORY.INFORMATIONAL,
-		author: "William Entriken (@fulldecent)",
-		createdAt: new Date("2019-07-10T00:00:00Z"),
-		updatedAt: new Date("2019-08-15T00:00:00Z"),
-		requires: null,
-	},
-	{
-		id: 2982,
-		title: "Serenity Phase 0",
-		description: "Specification for the Beacon Chain, the first phase of Ethereum 2.0.",
-		content: "# EIP-2982: Serenity Phase 0\n\nSpecification for the Beacon Chain, the first phase of Ethereum 2.0.",
-		status: EIP_STATUS.FINAL,
-		category: EIP_CATEGORY.INFORMATIONAL,
-		author: "Danny Ryan (@djrtwo), Vitalik Buterin (@vbuterin)",
-		createdAt: new Date("2020-07-01T00:00:00Z"),
-		updatedAt: new Date("2020-11-04T00:00:00Z"),
-		requires: null,
-	},
-	{
-		id: 6953,
-		title: "Network Upgrade Activation Triggers",
-		description: "Defines how network upgrades are activated.",
-		content: "# EIP-6953: Network Upgrade Activation Triggers\n\nDefines how network upgrades are activated.",
-		status: EIP_STATUS.FINAL,
-		category: EIP_CATEGORY.INFORMATIONAL,
-		author: "Tim Beiko (@timbeiko)",
-		createdAt: new Date("2023-04-12T00:00:00Z"),
-		updatedAt: new Date("2023-05-10T00:00:00Z"),
-		requires: null,
-	},
-	{
-		id: 7840,
-		title: "Add blob schedule to EL config files",
-		description: "Specifies changes to EL config files for blob transactions.",
-		content:
-			"# EIP-7840: Add blob schedule to EL config files\n\nSpecifies changes to EL config files for blob transactions.",
-		status: EIP_STATUS.FINAL,
-		category: EIP_CATEGORY.INFORMATIONAL,
-		author: "lightclient (@lightclient)",
-		createdAt: new Date("2023-10-01T00:00:00Z"),
-		updatedAt: new Date("2023-11-01T00:00:00Z"),
-		requires: null,
-	},
-	{
-		id: 2294,
-		title: "Explicit bound to Chain ID size",
-		description: "Proposes a limit on the size of Chain IDs.",
-		content: "# EIP-2294: Explicit bound to Chain ID size\n\nProposes a limit on the size of Chain IDs.",
-		status: EIP_STATUS.REVIEW,
-		category: EIP_CATEGORY.INFORMATIONAL,
-		author: "Zainan Victor Zhou (@xinbenlv), Alex Beregszaszi (@axic), Bryant Eisenbach (@fubuloubu)",
-		createdAt: new Date("2019-08-20T00:00:00Z"),
-		updatedAt: new Date("2019-09-20T00:00:00Z"),
-		requires: null,
-	},
+const randomTitles = [
+	"title 1",
+	"title 2",
+	"title 3",
+	"title 4",
+	"title 5",
+	"title 6",
+	"title 7",
+	"title 8",
+	"title 9",
+	"title 10",
 ];
+
+const randomDescriptions = [
+	"description 1",
+	"description 2",
+	"description 3",
+	"description 4",
+	"description 5",
+	"description 6",
+	"description 7",
+	"description 8",
+	"description 9",
+	"description 10",
+];
+
+const randomContents = [
+	"# content 1",
+	"# content 2",
+	"# content 3",
+	"# content 4",
+	"# content 5",
+	"# content 6",
+	"# content 7",
+	"# content 8",
+	"# content 9",
+	"# content 10",
+];
+
+const randomAuthors = [
+	"author 1",
+	"author 2",
+	"author 3",
+	"author 4",
+	"author 5",
+	"author 6",
+	"author 7",
+	"author 8",
+	"author 9",
+	"author 10",
+];
+
+const numEIPs = 1000;
+export const placeholderEIPs: IEIP[] = [];
+
+for (let i = 1; i < numEIPs; i++) {
+	placeholderEIPs.push({
+		id: i,
+		title: randomTitles[i % randomTitles.length],
+		description: randomDescriptions[i % randomDescriptions.length],
+		content: randomContents[i % randomContents.length],
+		status: AllEIPStatusValues[i % AllEIPStatusValues.length],
+		category: AllEIPCategoryValues[i % AllEIPCategoryValues.length],
+		authors: (() => {
+			const numAuthors = Math.floor(Math.random() * 3) + 1;
+			const authors = [];
+			for (let j = 0; j < numAuthors; j++) {
+				authors.push(randomAuthors[Math.floor(Math.random() * randomAuthors.length)]);
+			}
+			return authors;
+		})(),
+		createdAt: new Date(Date.now() - i * 1000),
+		updatedAt: new Date(Date.now() - i * 1000),
+		requires: (() => {
+			const numRequires = i % 10 === 0 ? Math.floor(Math.random() * 3) + 1 : 0;
+			const requires = [];
+			for (let j = 0; j < numRequires; j++) {
+				requires.push(Math.floor(Math.random() * numEIPs) + 1);
+			}
+			return requires;
+		})(),
+	});
+}
 
 export const placeholderComments: IComment[] = [
 	{

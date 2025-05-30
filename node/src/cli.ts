@@ -35,6 +35,7 @@ import crypto from "crypto";
 import { libp2pRouting } from "@helia/routers";
 import * as dotenv from "dotenv";
 import { placeholderEIPs } from "./placeholderData.js";
+import { type ICoreEIPInfo } from "@dsync/types";
 
 // add a cmd to add a orbit db id to the access controller of the given db addr
 
@@ -222,10 +223,18 @@ program
 		});
 
 		for (const eip of placeholderEIPs) {
-			await DBFinder.put(eip.id.toString(), JSON.stringify({ id: eip.id, title: eip.title, status: eip.status }));
+			await DBFinder.put(
+				eip.id.toString(),
+				JSON.stringify({
+					id: eip.id,
+					title: eip.title,
+					status: eip.status,
+					category: eip.category,
+				} as ICoreEIPInfo)
+			);
 		}
 		for await (const record of DBFinder.iterator()) {
-			console.log("record", JSON.parse(record.value));
+			console.log("record", JSON.parse(record.value) as ICoreEIPInfo);
 		}
 
 		// what is left:

@@ -184,3 +184,30 @@
 .dark-mode .empty-status {
 	color: #666666;
 }
+
+.loading-indicator {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	padding: 10px 0;
+}
+  
+  /* Styles for the smaller spinner within the loading-indicator */
+.loading-indicator .spinner {
+	border: 3px solid rgba(0, 0, 0, 0.1); /* Adjust border thickness if needed */
+	width: 16px;  /* Smaller width */
+	height: 16px; /* Smaller height */
+	border-radius: 50%;
+	border-left-color: #09f; /* Or your preferred spinner color */
+	animation: spin 1s linear infinite; /* 'linear' can look smoother for small spinners */
+}
+
+@keyframes spin {
+	0% {
+	  transform: rotate(0deg);
+	}
+	100% {
+	  transform: rotate(360deg);
+	}
+}

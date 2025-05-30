@@ -1,4 +1,4 @@
-import { useState, useMemo, useContext, useEffect } from "react";
+import { useState, useMemo, useContext, useEffect, useRef, useCallback } from "react";
 import {
 	type IEIP,
 	type IComment,
@@ -6,86 +6,138 @@ import {
 	EIP_STATUS,
 	AllEIPCategoryValues,
 	AllEIPStatusValues,
+	type ICoreEIPInfo,
 } from "@dsync/types";
 import EipDetailView from "./EipDetailView";
 import "../EipDisplayTable.css";
 import { useNavigate } from "react-router-dom";
 import { HeliaContext, DBFINDER_ADDRESS } from "../provider/HeliaProvider";
 
-type GroupedEIPs = Map<EIP_CATEGORY, Map<EIP_STATUS, IEIP[]>>;
+// Define interfaces based on usage to replace 'any' types for dbFinder and event entry
+interface MinimalStoreInterface {
+	iterator(options?: { limit?: number }): AsyncIterableIterator<{ value: string }>;
+	events: {
+		on(eventName: string, callback: (entry: StoreEventEntry) => void): void;
+		off(eventName: string, callback?: (entry: StoreEventEntry) => void): void;
+	};
+	close(): Promise<void> | void;
+}
+
+interface StoreEventEntry {
+	payload: {
+		value: string; // Expecting JSON string of ICoreEIPInfo
+	};
+}
+
+type GroupedEIPs = Map<EIP_CATEGORY, Map<EIP_STATUS, ICoreEIPInfo[]>>;
 
 const EipDisplayTable: React.FC = () => {
 	const navigate = useNavigate();
 	const { readOrbitDB: orbitDB } = useContext(HeliaContext);
 
-	const [dbEips, setDbEips] = useState<IEIP[]>([]);
+	const [dbEips, setDbEips] = useState<ICoreEIPInfo[]>([]);
 	const [isLoadingEips, setIsLoadingEips] = useState<boolean>(true);
 	const [dbError, setDbError] = useState<string | null>(null);
+
+	const dbFinderRef = useRef<MinimalStoreInterface | null>(null);
 
 	const [selectedEip, setSelectedEip] = useState<IEIP | null>(null);
 	const [selectedComments, setSelectedComments] = useState<IComment[]>([]);
 	const [expandedSections, setExpandedSections] = useState<Map<string, boolean>>(new Map());
 	const [selectedCategory, setSelectedCategory] = useState<EIP_CATEGORY | "All">("All");
 
-	useEffect(() => {
-		let dbFinder: any;
-		console.log("orbitDB from eip display table", orbitDB);
+	// Stable event handler for database updates
+	const updateHandler = useCallback((entry: StoreEventEntry) => {
+		console.log("DB update event received:", entry);
+		const newEip = JSON.parse(entry.payload.value) as ICoreEIPInfo;
+		setDbEips((prevEips) => {
+			if (!prevEips.find((existingEip) => existingEip.id === newEip.id)) {
+				return [...prevEips, newEip];
+			}
+			return prevEips;
+		});
+	}, []);
 
-		const loadEips = async () => {
+	useEffect(() => {
+		let isMounted = true;
+
+		const openAndLoadDatabase = async () => {
 			if (!orbitDB) {
-				setIsLoadingEips(false);
+				if (isMounted) setIsLoadingEips(false);
 				return;
 			}
 
-			try {
-				setIsLoadingEips(true);
-				setDbError(null);
-				console.log(`Opening EIP database at: ${DBFINDER_ADDRESS}`);
-				dbFinder = await orbitDB.open(DBFINDER_ADDRESS);
+			// Only open if the ref is null (i.e., DB not opened by this component instance yet or was cleaned up)
+			if (!dbFinderRef.current) {
+				try {
+					if (isMounted) {
+						setIsLoadingEips(true);
+						setDbError(null);
+					}
+					console.log(`Opening EIP database at: ${DBFINDER_ADDRESS}`);
+					const newDbFinder = await orbitDB.open(DBFINDER_ADDRESS);
 
-				const initialEips: IEIP[] = [];
-				for await (const record of dbFinder.iterator({ limit: -1 })) {
-					initialEips.push(JSON.parse(record.value) as IEIP);
-				}
-				console.log("Fetched EIPs from DB:", initialEips);
-				setDbEips(initialEips);
+					if (!isMounted) {
+						// Component unmounted while opening
+						if (newDbFinder) newDbFinder.close();
+						return;
+					}
+					dbFinderRef.current = newDbFinder;
 
-				// Listen for new updates
-				dbFinder.events.on("update", (entry: any) => {
-					console.log("DB update event received:", entry);
-					const newEip = JSON.parse(entry.value);
-					setDbEips((prevEips) => {
-						// Avoid duplicates if entry already processed or by checking ID
-						if (!prevEips.find((eip) => eip.id === newEip.id)) {
-							return [...prevEips, newEip];
+					// Ensure dbFinderRef.current is not null before proceeding
+					if (!dbFinderRef.current) {
+						console.error("Failed to initialize dbFinderRef.current after open.");
+						if (isMounted) {
+							setDbError("Failed to initialize database instance.");
+							setIsLoadingEips(false);
 						}
-						return prevEips;
-					});
-				});
-			} catch (error) {
-				console.error("Error loading EIPs from OrbitDB:", error);
-				setDbError("Failed to load EIPs from database.");
-			} finally {
-				setIsLoadingEips(false);
+						return;
+					}
+
+					// Attach event listener for updates
+					dbFinderRef.current.events.on("update", updateHandler);
+
+					// Load initial EIPs
+					console.log("Fetching EIPs from DB...");
+					const initialEips: ICoreEIPInfo[] = [];
+					for await (const record of dbFinderRef.current.iterator({ limit: -1 })) {
+						const eip = JSON.parse(record.value) as ICoreEIPInfo;
+						initialEips.push(eip);
+					}
+					if (isMounted) {
+						console.log("Fetched EIPs from DB:", initialEips.length);
+						setDbEips(initialEips);
+					}
+				} catch (error) {
+					console.error("Error loading EIPs from OrbitDB:", error);
+					if (isMounted) {
+						setDbError(error instanceof Error ? error.message : "Unknown error loading EIPs");
+					}
+				} finally {
+					if (isMounted) {
+						setIsLoadingEips(false);
+					}
+				}
 			}
 		};
 
-		loadEips();
+		openAndLoadDatabase();
 
 		return () => {
-			if (dbFinder) {
-				dbFinder.events.off("update");
-				dbFinder.close();
-				console.log("Closed EIP database and cleaned up listeners.");
+			isMounted = false;
+			if (dbFinderRef.current) {
+				console.log("Cleaning up EIP database listener and closing connection:", DBFINDER_ADDRESS);
+				dbFinderRef.current.close();
+				dbFinderRef.current = null;
 			}
 		};
-	}, [orbitDB]);
+	}, [orbitDB, updateHandler]);
 
 	const { groupedEIPs } = useMemo(() => {
 		const newGroupedEIPs: GroupedEIPs = new Map();
 
 		for (const category of AllEIPCategoryValues) {
-			const statusMap = new Map<EIP_STATUS, IEIP[]>();
+			const statusMap = new Map<EIP_STATUS, ICoreEIPInfo[]>();
 			for (const status of AllEIPStatusValues) {
 				statusMap.set(status, []);
 			}
@@ -106,7 +158,7 @@ const EipDisplayTable: React.FC = () => {
 		};
 	}, [dbEips]);
 
-	const handleEipClick = (eip: IEIP) => {
+	const handleEipClick = (eip: ICoreEIPInfo) => {
 		navigate(`/eips/${eip.id}`);
 	};
 
@@ -150,7 +202,12 @@ const EipDisplayTable: React.FC = () => {
 					</a>
 				))}
 			</nav>
-			{isLoadingEips && <p>Loading EIPs from database...</p>}
+			{isLoadingEips && (
+				<div className="loading-indicator">
+					<p>Loading EIPs from database...</p>
+					<div className="spinner"></div>
+				</div>
+			)}
 			{dbError && <p style={{ color: "red" }}>{dbError}</p>}
 			{!isLoadingEips && !dbError && dbEips.length === 0 && <p>No EIPs found in the database.</p>}
 			<div id="eip-listing-section">
@@ -184,7 +241,7 @@ const EipDisplayTable: React.FC = () => {
 														<tr>
 															<th className="eip-number">Number</th>
 															<th className="eip-title">Title</th>
-															<th className="eip-author">Author</th>
+															{/* <th className="eip-author">Author</th> */}
 														</tr>
 													</thead>
 													<tbody>
@@ -205,7 +262,7 @@ const EipDisplayTable: React.FC = () => {
 																	</a>
 																</td>
 																<td className="eip-title">{eip.title}</td>
-																<td className="eip-author">{eip.author}</td>
+																{/* <td className="eip-author">{eip.author}</td> */}
 															</tr>
 														))}
 													</tbody>

@@ -30,8 +30,15 @@ export interface IEIP {
 	content: string; // Markdown
 	status: EIP_STATUS;
 	category: EIP_CATEGORY;
-	author: string;
+	authors: string[];
 	createdAt: Date;
 	updatedAt: Date;
-	requires: number[] | null;
+	requires: number[];
+}
+
+export interface ICoreEIPInfo {
+	id: number;
+	title: string;
+	status: EIP_STATUS;
+	category: EIP_CATEGORY;
 }
