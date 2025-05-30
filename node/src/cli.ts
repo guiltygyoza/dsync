@@ -34,6 +34,7 @@ import { Alchemy, Network } from "alchemy-sdk";
 import crypto from "crypto";
 import { libp2pRouting } from "@helia/routers";
 import * as dotenv from "dotenv";
+import { placeholderEIPs } from "./placeholderData.js";
 
 // add a cmd to add a orbit db id to the access controller of the given db addr
 
@@ -148,7 +149,7 @@ program
 		const addresses = {
 			listen: [
 				//options.tcpPort ? `/ip4/0.0.0.0/tcp/${options.tcpPort}` : '/ip4/0.0.0.0/tcp/0',
-				//options.wsPort ? `/ip4/0.0.0.0/tcp/${options.wsPort}/ws` : '/ip4/0.0.0.0/tcp/0/ws',
+				options.wsPort ? `/ip4/0.0.0.0/tcp/${options.wsPort}/ws` : "/ip4/0.0.0.0/tcp/0/ws",
 				//options.webrtcPort ? `/ip4/0.0.0.0/udp/${options.webrtcPort}/webrtc-direct` : '/ip4/0.0.0.0/udp/0/webrtc-direct',
 				//'/ip6/::/tcp/0',
 				//'/ip6/::/tcp/0/ws',
@@ -179,18 +180,29 @@ program
 			console.log("peer:disconnect", peerId.detail);
 		});
 
-		const DBFINDER_NAME = "/orbitdb/zdpuAwHvrRnh7PzhE89FUUM2eMrdpwGs8SRPS41JYiSLGoY8u";
+		// const DBFINDER_NAME = "/orbitdb/zdpuAwHvrRnh7PzhE89FUUM2eMrdpwGs8SRPS41JYiSLGoY8u";
+
+		// console.log("orbitdb id", orbitdb.identity.id);
+		// const DBFinder = await orbitdb.open(DBFINDER_NAME, {
+		// 	type: "keyvalue",
+		// 	AccessController: IPFSAccessController({
+		// 		write: [
+		// 			"02ac6a344f5cdceb2c4ccb78596ca3891d31861e803e429f624e0f65a402371ab6",
+		// 			"02ac6a344f5cdceb2c4ccb78596ca3891d31861e803e429f624e0f65a402371ab6",
+		// 		],
+		// 	}),
+		// });
+
+		const DBFINDER_NAME = "dbfinder";
 
 		console.log("orbitdb id", orbitdb.identity.id);
 		const DBFinder = await orbitdb.open(DBFINDER_NAME, {
 			type: "keyvalue",
 			AccessController: IPFSAccessController({
-				write: [
-					"02ac6a344f5cdceb2c4ccb78596ca3891d31861e803e429f624e0f65a402371ab6",
-					"02ac6a344f5cdceb2c4ccb78596ca3891d31861e803e429f624e0f65a402371ab6",
-				],
+				write: [orbitdb.identity.id],
 			}),
 		});
+
 		console.log("DBFinder address", DBFinder.address.toString());
 		DBFinder.events.on("update", async (entry: any) => {
 			console.log("Database update:", entry.payload.value);
@@ -208,8 +220,12 @@ program
 			// The peerId of the ipfs1 node.
 			console.log("close", peerId);
 		});
+
+		for (const eip of placeholderEIPs) {
+			await DBFinder.put(eip.id.toString(), JSON.stringify({ id: eip.id, title: eip.title, status: eip.status }));
+		}
 		for await (const record of DBFinder.iterator()) {
-			console.log("record1", record);
+			console.log("record", JSON.parse(record.value));
 		}
 
 		// what is left:

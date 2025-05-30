@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useParams } from "react-router-dom";
-import { placeholderEIPs, placeholderComments } from "../placeholderData";
 import type { IEIP } from "../types/eip";
 import type { IComment } from "../types/comment";
 import { EIP_STATUS } from "../constants/eip";
@@ -90,18 +89,17 @@ const EIPPage: React.FC = () => {
 	const [newCommentText, setNewCommentText] = useState("");
 
 	useEffect(() => {
-		const currentEIPId = parseInt(eipId?.replace("eip-", "") || "0", 10);
-		const currentEIP = placeholderEIPs.find((e) => e.id === currentEIPId);
-
-		if (currentEIP) {
-			setEip(currentEIP);
-			const eipComments = placeholderComments.filter((c) => c.eipId === currentEIP.id);
-			setComments(eipComments);
-		} else {
-			console.warn("[EIPPage] EIP not found for eipId:", eipId);
-			setEip(null);
-			setComments([]);
-		}
+		// const currentEIPId = parseInt(eipId?.replace("eip-", "") || "0", 10);
+		// const currentEIP = placeholderEIPs.find((e) => e.id === currentEIPId);
+		// if (currentEIP) {
+		// 	setEip(currentEIP);
+		// 	const eipComments = placeholderComments.filter((c) => c.eipId === currentEIP.id);
+		// 	setComments(eipComments);
+		// } else {
+		// 	console.warn("[EIPPage] EIP not found for eipId:", eipId);
+		// 	setEip(null);
+		// 	setComments([]);
+		// }
 	}, [eipId]);
 
 	const handleAddComment = (e: React.FormEvent) => {

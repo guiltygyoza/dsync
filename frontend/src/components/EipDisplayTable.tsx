@@ -1,23 +1,82 @@
-import React, { useState, useMemo } from "react";
-import { placeholderEIPs } from "../placeholderData";
+import React, { useState, useMemo, useContext, useEffect } from "react";
 import type { IEIP } from "../types/eip";
 import type { IComment } from "../types/comment";
 import { EIP_CATEGORY, EIP_STATUS, AllEIPCategoryValues, AllEIPStatusValues } from "../constants/eip";
 import EipDetailView from "./EipDetailView";
 import "../EipDisplayTable.css";
 import { useNavigate } from "react-router-dom";
+import { HeliaContext, DBFINDER_ADDRESS } from "../provider/HeliaProvider";
 
-const allEips: IEIP[] = placeholderEIPs;
+// const allEips: IEIP[] = placeholderEIPs; // We will replace this with dbEips
 
 type GroupedEIPs = Map<EIP_CATEGORY, Map<EIP_STATUS, IEIP[]>>;
 
 const EipDisplayTable: React.FC = () => {
 	const navigate = useNavigate();
+	const { orbitDB } = useContext(HeliaContext);
+
+	const [dbEips, setDbEips] = useState<IEIP[]>([]);
+	const [isLoadingEips, setIsLoadingEips] = useState<boolean>(true);
+	const [dbError, setDbError] = useState<string | null>(null);
 
 	const [selectedEip, setSelectedEip] = useState<IEIP | null>(null);
 	const [selectedComments, setSelectedComments] = useState<IComment[]>([]);
 	const [expandedSections, setExpandedSections] = useState<Map<string, boolean>>(new Map());
 	const [selectedCategory, setSelectedCategory] = useState<EIP_CATEGORY | "All">("All");
+
+	useEffect(() => {
+		let dbFinder: any;
+		console.log("orbitDB from eip display table", orbitDB);
+
+		const loadEips = async () => {
+			if (!orbitDB) {
+				setIsLoadingEips(false);
+				return;
+			}
+
+			try {
+				setIsLoadingEips(true);
+				setDbError(null);
+				console.log(`Opening EIP database at: ${DBFINDER_ADDRESS}`);
+				dbFinder = await orbitDB.open(DBFINDER_ADDRESS);
+
+				const initialEips: IEIP[] = [];
+				for await (const record of dbFinder.iterator({ limit: -1 })) {
+					initialEips.push(JSON.parse(record.value) as IEIP);
+				}
+				console.log("Fetched EIPs from DB:", initialEips);
+				setDbEips(initialEips);
+
+				// Listen for new updates
+				dbFinder.events.on("update", (entry: any) => {
+					console.log("DB update event received:", entry);
+					const newEip = JSON.parse(entry.value);
+					setDbEips((prevEips) => {
+						// Avoid duplicates if entry already processed or by checking ID
+						if (!prevEips.find((eip) => eip.id === newEip.id)) {
+							return [...prevEips, newEip];
+						}
+						return prevEips;
+					});
+				});
+			} catch (error) {
+				console.error("Error loading EIPs from OrbitDB:", error);
+				setDbError("Failed to load EIPs from database.");
+			} finally {
+				setIsLoadingEips(false);
+			}
+		};
+
+		loadEips();
+
+		return () => {
+			if (dbFinder) {
+				dbFinder.events.off("update");
+				dbFinder.close();
+				console.log("Closed EIP database and cleaned up listeners.");
+			}
+		};
+	}, [orbitDB]);
 
 	const { groupedEIPs } = useMemo(() => {
 		const newGroupedEIPs: GroupedEIPs = new Map();
@@ -30,19 +89,20 @@ const EipDisplayTable: React.FC = () => {
 			newGroupedEIPs.set(category, statusMap);
 		}
 
-		for (const eip of allEips) {
+		// Use dbEips instead of allEips
+		for (const eip of dbEips) {
 			newGroupedEIPs.get(eip.category)?.get(eip.status)?.push(eip);
 		}
 
 		for (const statusMap of newGroupedEIPs.values()) {
 			for (const eipList of statusMap.values()) {
-				eipList.sort((a, b) => b.id - a.id);
+				eipList.sort((a, b) => b.id - a.id); // Assuming 'id' is a number for sorting
 			}
 		}
 		return {
 			groupedEIPs: newGroupedEIPs,
 		};
-	}, []);
+	}, [dbEips]); // Recalculate when dbEips changes
 
 	const handleEipClick = (eip: IEIP) => {
 		navigate(`/eips/${eip.id}`);
@@ -88,6 +148,9 @@ const EipDisplayTable: React.FC = () => {
 					</a>
 				))}
 			</nav>
+			{isLoadingEips && <p>Loading EIPs from database...</p>}
+			{dbError && <p style={{ color: "red" }}>{dbError}</p>}
+			{!isLoadingEips && !dbError && dbEips.length === 0 && <p>No EIPs found in the database.</p>}
 			<div id="eip-listing-section">
 				{" "}
 				{/* Added an ID for scrolling */}

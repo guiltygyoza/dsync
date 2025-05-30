@@ -6,7 +6,7 @@
 	"license": "MIT",
 	"scripts": {
 		"build": "pnpm build:frontend",
-		"build:frontend": "pnpm build --filter @dsync/frontend",
+		"build:frontend": "cd frontend && pnpm build",
 		"lint": "eslint .",
 		"lint:fix": "eslint . --fix",
 		"format": "prettier --write .",

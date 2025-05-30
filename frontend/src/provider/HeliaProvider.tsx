@@ -5,14 +5,14 @@ import { tls } from "@libp2p/tls";
 import { gossipsub } from "@chainsafe/libp2p-gossipsub";
 import { createDelegatedRoutingV1HttpApiClient } from "@helia/delegated-routing-v1-http-api-client";
 import { bootstrap } from "@libp2p/bootstrap";
-import { delegatedHTTPRoutingDefaults } from "@helia/routers";
-import { createOrbitDB, IPFSAccessController, useIdentityProvider } from "@orbitdb/core";
+import { delegatedHTTPRoutingDefaults, libp2pRouting } from "@helia/routers";
+import { createOrbitDB, IPFSAccessController, useIdentityProvider, type OrbitDB } from "@orbitdb/core";
 import { uPnPNAT } from "@libp2p/upnp-nat";
 import { ipnsSelector } from "ipns/selector";
 import { ipnsValidator } from "ipns/validator";
 import { createHelia, type DefaultLibp2pServices, type HeliaLibp2p } from "helia";
 import { createLibp2p } from "libp2p";
-import { useEffect, useState, useCallback, createContext } from "react";
+import { useEffect, useState, useCallback, createContext, useMemo } from "react";
 import { webRTC, webRTCDirect } from "@libp2p/webrtc";
 import { webSockets } from "@libp2p/websockets";
 import { yamux } from "@chainsafe/libp2p-yamux";
@@ -26,6 +26,7 @@ import { kadDHT } from "@libp2p/kad-dht";
 import { devToolsMetrics } from "@libp2p/devtools-metrics";
 import { peerIdFromString } from "@libp2p/peer-id";
 import { tcp } from "@libp2p/tcp";
+import { LevelBlockstore } from "blockstore-level";
 
 import { useAccount, useSignMessage } from "wagmi";
 import OrbitDBIdentityProviderEthereum from "../OrbitDBUtils/IdentityProviderEthereum";
@@ -41,6 +42,9 @@ export const bootstrapConfig = {
 	],
 };
 
+// export const DBFINDER_ADDRESS = "/orbitdb/zdpuAwHvrRnh7PzhE89FUUM2eMrdpwGs8SRPS41JYiSLGoY8u";
+export const DBFINDER_ADDRESS = "/orbitdb/zdpuAptogZWxspXw62z2Ta3M15XxGSEJCYK7qk963byFGmGjs";
+
 // Based on the structure returned by OrbitDBIdentityProviderEthereum
 type OrbitDBIdentityInstance = () => Promise<{
 	type: string;
@@ -52,12 +56,14 @@ export const HeliaContext = createContext<{
 	helia: HeliaLibp2p<Libp2p<DefaultLibp2pServices>> | null;
 	fs: UnixFS | null;
 	orbitDBIdentity: OrbitDBIdentityInstance | null; // Use the defined type
+	orbitDB: OrbitDB | null; // Add OrbitDB instance to context
 	error: boolean;
 	starting: boolean;
 }>({
 	helia: null,
 	fs: null,
 	orbitDBIdentity: null,
+	orbitDB: null, // Initialize orbitDB as null
 	error: false,
 	starting: true,
 });
@@ -65,6 +71,7 @@ export const HeliaContext = createContext<{
 export const HeliaProvider = ({ children }: { children: React.ReactNode }) => {
 	const [helia, setHelia] = useState<HeliaLibp2p<Libp2p<DefaultLibp2pServices>> | null>(null);
 	const [fs, setFs] = useState<UnixFS | null>(null);
+	const [orbitDB, setOrbitDB] = useState<OrbitDB | null>(null);
 	const [starting, setStarting] = useState(true);
 	const [error, setError] = useState(false);
 	const [te, setTe] = useState(false);
@@ -72,6 +79,8 @@ export const HeliaProvider = ({ children }: { children: React.ReactNode }) => {
 	const [orbitDBIdentity, setOrbitDBIdentity] = useState<OrbitDBIdentityInstance | null>(null);
 	const { address, isConnected } = useAccount();
 	const { signMessageAsync } = useSignMessage();
+	const blockstore = useMemo(() => new LevelBlockstore("./ipfs"), []);
+	useIdentityProvider(OrbitDBIdentityProviderEthereum);
 
 	useEffect(() => {
 		if (isConnected && address && signMessageAsync) {
@@ -86,19 +95,13 @@ export const HeliaProvider = ({ children }: { children: React.ReactNode }) => {
 			console.log("OrbitDB Identity Provider configured with address:", address);
 			// Log the type of instance to confirm it's a function
 			console.log("identityProviderInstance is a:", typeof identityProviderInstance);
-			// If you want to log the resolved value, do it carefully:
-			// identityProviderInstance().then(resolvedIdentity => {
-			//  console.log("Resolved identity from instance:", resolvedIdentity);
-			// }).catch(err => console.error("Error resolving identityProviderInstance for logging:", err));
 		} else {
 			setOrbitDBIdentity(null);
-			console.log("OrbitDB Identity Provider cleared.");
+			console.log("OrbitDB Identity Provider is cleared.");
 		}
 	}, [isConnected, address, signMessageAsync]);
 
 	const startHelia = useCallback(async () => {
-		useIdentityProvider(OrbitDBIdentityProviderEthereum);
-
 		if (helia) {
 			console.info("helia already started");
 		} else if (window.helia) {
@@ -161,20 +164,29 @@ export const HeliaProvider = ({ children }: { children: React.ReactNode }) => {
 				//    "12D3KooWB1J5ksLv96GTyH5Ugp1a8CDpLr5XGXpNHwWorTx95PDc"
 				//  )
 				//);
-				const helia = await createHelia({ libp2p });
+
+				const helia = await createHelia({ libp2p, blockstore, routers: [libp2pRouting(libp2p)] });
+				const orbitdb = await createOrbitDB({
+					ipfs: helia,
+					identity: {
+						provider: orbitDBIdentity,
+					},
+					blockstore,
+				});
 				// await libp2p.dial(
 				//     multiaddr("/ip4/5.75.178.220/tcp/36437/p2p/12D3KooWBkPEDWKWCdZY28Kyy7TnegeRT61obxwdpFuQ7MfcVdRQ")
 				// );
 				// @ts-expect-error -- .
 				setHelia(helia);
 				setFs(unixfs(helia));
+				setOrbitDB(orbitdb);
 				setStarting(false);
 			} catch (e) {
 				console.error(e);
 				setError(true);
 			}
 		}
-	}, [helia]);
+	}, [helia, blockstore, orbitDBIdentity]);
 
 	useEffect(() => {
 		startHelia();
@@ -207,14 +219,13 @@ export const HeliaProvider = ({ children }: { children: React.ReactNode }) => {
 					identity: {
 						provider: orbitDBIdentity,
 					},
+					blockstore,
 				});
 				console.log(orbitdb.identity);
 				console.log("orbitdb identity id", orbitdb.identity.id);
 				console.log("OrbitDB instance created:", orbitdb);
 
-				const db = await orbitdb.open(
-					"/orbitdb/zdpuAvLv3TGJULV3K7YnerQSdjypzQJwfxRJdCc1eVdH6oK6Z" // DBFinder address
-				);
+				const db = await orbitdb.open(DBFINDER_ADDRESS);
 				console.log("Test DB opened:", db.address);
 
 				if (orbitDBIdentity) {
@@ -237,8 +248,8 @@ export const HeliaProvider = ({ children }: { children: React.ReactNode }) => {
 
 				console.log("Reading DB records...");
 				const records = [];
-				for await (const record of db.iterator({ limit: 5 })) {
-					console.log("DB record:", record);
+				for await (const record of db.iterator({ limit: -1 })) {
+					// console.log("DB record:", record);
 					records.push(record);
 				}
 				console.log("Finished reading records. Count:", records.length);
@@ -248,7 +259,7 @@ export const HeliaProvider = ({ children }: { children: React.ReactNode }) => {
 				console.error("Error during OrbitDB test function:", e);
 			}
 		}
-	}, [helia, te, orbitDBIdentity, isConnected]);
+	}, [helia, te, orbitDBIdentity, isConnected, blockstore]);
 
 	useEffect(() => {
 		if (helia && !starting) {
@@ -262,6 +273,7 @@ export const HeliaProvider = ({ children }: { children: React.ReactNode }) => {
 				helia,
 				fs,
 				orbitDBIdentity,
+				orbitDB,
 				error,
 				starting,
 			}}

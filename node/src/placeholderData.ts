@@ -1,6 +1,6 @@
-import type { IEIP } from "./types/eip";
-import type { IComment } from "./types/comment";
-import { EIP_STATUS, EIP_CATEGORY } from "./constants/eip";
+import type { IEIP } from "./types/eip.js";
+import type { IComment } from "./types/comment.js";
+import { EIP_STATUS, EIP_CATEGORY } from "./constants/eip.js";
 
 // TODO: Replace placeholderData with OrbitDB integration for EIPs
 export const placeholderEIPs: IEIP[] = [

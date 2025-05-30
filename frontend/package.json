@@ -40,6 +40,7 @@
 		"@libp2p/websockets": "^9.2.10",
 		"@orbitdb/core": "^2.5.0",
 		"@tanstack/react-query": "^5.77.2",
+		"blockstore-level": "^2.0.3",
 		"ethers": "^6.14.0",
 		"helia": "^5.4.1",
 		"ipns": "^10.0.2",
