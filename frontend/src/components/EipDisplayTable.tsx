@@ -89,20 +89,19 @@ const EipDisplayTable: React.FC = () => {
 			newGroupedEIPs.set(category, statusMap);
 		}
 
-		// Use dbEips instead of allEips
 		for (const eip of dbEips) {
 			newGroupedEIPs.get(eip.category)?.get(eip.status)?.push(eip);
 		}
 
 		for (const statusMap of newGroupedEIPs.values()) {
 			for (const eipList of statusMap.values()) {
-				eipList.sort((a, b) => b.id - a.id); // Assuming 'id' is a number for sorting
+				eipList.sort((a, b) => b.id - a.id);
 			}
 		}
 		return {
 			groupedEIPs: newGroupedEIPs,
 		};
-	}, [dbEips]); // Recalculate when dbEips changes
+	}, [dbEips]);
 
 	const handleEipClick = (eip: IEIP) => {
 		navigate(`/eips/${eip.id}`);
