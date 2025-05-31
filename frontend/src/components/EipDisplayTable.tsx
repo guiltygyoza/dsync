@@ -74,7 +74,7 @@ const EipDisplayTable: React.FC = () => {
 						setIsLoadingEips(true);
 						setDbError(null);
 					}
-					console.log(`Opening EIP database at: ${DBFINDER_ADDRESS}`);
+					console.log(`Opening the DBFinder at: ${DBFINDER_ADDRESS}`);
 					const newDbFinder = await orbitDB.open(DBFINDER_ADDRESS);
 
 					if (!isMounted) {
@@ -159,7 +159,8 @@ const EipDisplayTable: React.FC = () => {
 	}, [dbEips]);
 
 	const handleEipClick = (eip: ICoreEIPInfo) => {
-		navigate(`/eips/${eip.id}`);
+		console.log("eip passed to handleEipClick", eip);
+		navigate(`/eips/${eip.id}`, { state: { dbAddress: eip.dbAddress } });
 	};
 
 	const handleCloseDetailView = () => {

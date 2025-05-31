@@ -11,6 +11,7 @@ function CreateEIPForm() {
 	const [error, setError] = useState<string | null>(null);
 
 	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+		setIsSubmitting(true);
 		e.preventDefault();
 		if (!title.trim() || !description.trim()) {
 			setError("Title and description cannot be empty.");
@@ -18,9 +19,7 @@ function CreateEIPForm() {
 		}
 
 		const orbitdb = await writeOrbitDB();
-		const eip = await orbitdb.open("/orbitdb/zdpuAykcSMHNmpY8rigPbCQWDnw17JGdgPs7BtxvBbfpNW39S", {
-			type: "keyvalue",
-		});
+		const eip = await orbitdb.open("/orbitdb/zdpuB3UdPyM3A4mW7mr54nwTZLyTderAQ37FJ9dNzE6UXUVfY");
 		console.log("eip", eip.address.toString());
 		await eip.put(title, { title, description });
 

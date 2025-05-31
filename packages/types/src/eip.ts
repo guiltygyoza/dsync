@@ -1,11 +1,11 @@
 export enum EIP_STATUS {
-	DRAFT = "Draft",
-	REVIEW = "Review",
-	LAST_CALL = "Last Call",
+	LIVING = "Living",
 	FINAL = "Final",
+	LAST_CALL = "Last Call",
+	REVIEW = "Review",
+	DRAFT = "Draft",
 	STAGNANT = "Stagnant",
 	WITHDRAWN = "Withdrawn",
-	LIVING = "Living",
 }
 
 export enum EIP_CATEGORY {
@@ -34,6 +34,7 @@ export interface IEIP {
 	createdAt: Date;
 	updatedAt: Date;
 	requires: number[];
+	dbAddress: string;
 }
 
 export interface ICoreEIPInfo {
@@ -41,4 +42,5 @@ export interface ICoreEIPInfo {
 	title: string;
 	status: EIP_STATUS;
 	category: EIP_CATEGORY;
+	dbAddress: string;
 }

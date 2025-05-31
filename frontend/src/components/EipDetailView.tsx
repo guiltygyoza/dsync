@@ -1,6 +1,7 @@
-import React from "react";
-import type { IEIP } from "../types/eip";
-import type { IComment } from "../types/comment";
+import React, { useContext, useEffect } from "react";
+import { useLocation } from "react-router-dom";
+import type { IEIP, IComment } from "@dsync/types";
+import { HeliaContext } from "../provider/HeliaProvider";
 
 interface EipDetailViewProps {
 	eip: IEIP;
@@ -9,6 +10,25 @@ interface EipDetailViewProps {
 }
 
 const EipDetailView: React.FC<EipDetailViewProps> = ({ eip, comments, onClose }) => {
+	const { readOrbitDB: orbitDB } = useContext(HeliaContext);
+	const location = useLocation();
+	const dbAddress = location.state?.dbAddress;
+
+	useEffect(() => {
+		if (!dbAddress) {
+			console.error("No dbAddress found in location state");
+			return;
+		}
+		const openAndLoadDatabase = async () => {
+			const eipDoc = await orbitDB.open(dbAddress);
+			console.log("eipDoc", eipDoc.address.toString());
+			for (const record of eipDoc.iterator({ limit: -1 })) {
+				console.log("record", record);
+			}
+		};
+		openAndLoadDatabase();
+	}, [orbitDB, dbAddress]);
+
 	// TODO: Replace with actual OrbitDB comment submission logic
 	const handleAddComment = (text: string, parentId: string | null = null) => {
 		console.log(`Adding comment to EIP ${eip.id}: ${text}, parent: ${parentId}`);
@@ -31,7 +51,7 @@ const EipDetailView: React.FC<EipDetailViewProps> = ({ eip, comments, onClose })
 					<strong>Category:</strong> {eip.category}
 				</p>
 				<p>
-					<strong>Author(s):</strong> {eip.author}
+					<strong>Author(s):</strong> {eip.authors.join(", ")}
 				</p>
 				<p>
 					<strong>Created:</strong> {new Date(eip.createdAt).toLocaleDateString()}
@@ -60,10 +80,10 @@ const EipDetailView: React.FC<EipDetailViewProps> = ({ eip, comments, onClose })
 									<strong>{comment.createdBy}</strong> ({new Date(comment.createdAt).toLocaleString()}
 									):
 								</p>
-								<p>{comment.text}</p>
+								<p>{comment.content}</p>
 								{/* Basic reply functionality placeholder */}
 								<button
-									onClick={() => handleAddComment("Reply to: " + comment.text, comment.id)}
+									onClick={() => handleAddComment("Reply to: " + comment.content, comment.id)}
 									style={styles.replyButton}
 								>
 									Reply

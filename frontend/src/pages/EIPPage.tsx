@@ -1,9 +1,10 @@
-import { useState, useEffect, useMemo } from "react";
-import { useParams } from "react-router-dom";
+import React, { useContext, useState, useEffect, useMemo, useRef } from "react";
+import { useParams, useLocation } from "react-router-dom";
 import { type IEIP, type IComment, EIP_STATUS } from "@dsync/types";
+import { DBFINDER_ADDRESS, HeliaContext } from "../provider/HeliaProvider";
 
 const isEIPEditable = (status: EIP_STATUS): boolean => {
-	return [EIP_STATUS.DRAFT, EIP_STATUS.REVIEW, EIP_STATUS.LAST_CALL].includes(status);
+	return [EIP_STATUS.DRAFT, EIP_STATUS.REVIEW, EIP_STATUS.LAST_CALL, EIP_STATUS.LIVING].includes(status);
 };
 
 interface ICommentProps {
@@ -12,6 +13,28 @@ interface ICommentProps {
 	onReply: (parentId: string, replyText: string) => void;
 	isEditable: boolean;
 	currentEIPId: number;
+}
+
+interface DocInterface {
+	key: string;
+	value: any;
+}
+
+// Define interfaces based on usage to replace 'any' types for dbFinder and event entry
+interface MinimalDocDatabaseInterface {
+	iterator(options?: { limit?: number }): AsyncIterableIterator<{ key: string; value: any }>;
+	events: {
+		on(eventName: string, callback: (entry: StoreEventEntry) => void): void;
+		off(eventName: string, callback?: (entry: StoreEventEntry) => void): void;
+	};
+	close(): Promise<void> | void;
+	get(key: string): Promise<DocInterface | null>;
+}
+
+interface StoreEventEntry {
+	payload: {
+		value: string; // Expecting JSON string of ICoreEIPInfo
+	};
 }
 
 const CommentItem: React.FC<ICommentProps> = ({ comment, allComments, onReply, isEditable, currentEIPId }) => {
@@ -37,7 +60,7 @@ const CommentItem: React.FC<ICommentProps> = ({ comment, allComments, onReply, i
 			<p>
 				<strong>{comment.createdBy}</strong> ({new Date(comment.createdAt).toLocaleDateString()}):
 			</p>
-			<p>{comment.text}</p>
+			<p>{comment.content}</p>
 			{isEditable && (
 				<button
 					onClick={() => setShowReplyForm(!showReplyForm)}
@@ -80,36 +103,144 @@ const CommentItem: React.FC<ICommentProps> = ({ comment, allComments, onReply, i
 	);
 };
 
+const updateHandler = (entry: StoreEventEntry) => {
+	console.log("DB update event received:", entry);
+	// const newEip = JSON.parse(entry.payload.value) as IEIP;
+	// setEip(newEip);
+};
+
 const EIPPage: React.FC = () => {
 	const { eipId } = useParams<{ eipId: string }>();
 	const [eip, setEip] = useState<IEIP | null>(null);
 	const [comments, setComments] = useState<IComment[]>([]);
 	const [newCommentText, setNewCommentText] = useState("");
+	const [isLoadingEip, setIsLoadingEip] = useState<boolean>(true);
+	const [dbError, setDbError] = useState<string | null>(null);
+
+	const { writeOrbitDB: writeOrbitdb, readOrbitDB: readOrbitdb } = useContext(HeliaContext);
+	const location = useLocation();
+	const dbAddress = useRef<string | null>(location.state?.dbAddress);
+
+	if (!dbAddress.current) {
+		const localStoredAddress = localStorage.getItem(`eip-${eipId}`);
+		if (localStoredAddress) {
+			dbAddress.current = localStoredAddress;
+			console.log("Fetched address from localStorage", dbAddress.current);
+		} else {
+			console.log("Need to fetch address from dbFinder");
+		}
+	} else {
+		console.log("Fetched address from forwarded state", dbAddress.current);
+	}
+
+	const eipDBRef = useRef<MinimalDocDatabaseInterface | null>(null);
 
 	useEffect(() => {
-		// const currentEIPId = parseInt(eipId?.replace("eip-", "") || "0", 10);
-		// const currentEIP = placeholderEIPs.find((e) => e.id === currentEIPId);
-		// if (currentEIP) {
-		// 	setEip(currentEIP);
-		// 	const eipComments = placeholderComments.filter((c) => c.eipId === currentEIP.id);
-		// 	setComments(eipComments);
-		// } else {
-		// 	console.warn("[EIPPage] EIP not found for eipId:", eipId);
-		// 	setEip(null);
-		// 	setComments([]);
-		// }
-	}, [eipId]);
+		let isMounted = true;
+
+		const openAndLoadDatabase = async () => {
+			if (!readOrbitdb) {
+				if (isMounted) setIsLoadingEip(false);
+				return;
+			}
+
+			if (!eipDBRef.current) {
+				try {
+					if (isMounted) {
+						setIsLoadingEip(true);
+						setDbError(null);
+					}
+
+					if (!dbAddress.current) {
+						console.log("Need to fetch address from dbFinder");
+						const dbFinder = await readOrbitdb.open(DBFINDER_ADDRESS);
+						const eipAddress = await dbFinder.get(`eip-${eipId}`);
+						dbAddress.current = eipAddress;
+						console.log("Fetched address from dbFinder", dbAddress.current);
+						dbFinder.close();
+					}
+					if (dbAddress.current) {
+						localStorage.setItem(`eip-${eipId}`, dbAddress.current);
+					}
+
+					console.log(`Opening the read database at: ${dbAddress.current}`);
+					const eipDoc = await readOrbitdb.open(dbAddress.current);
+
+					if (!isMounted) {
+						if (eipDoc) eipDoc.close();
+						return;
+					}
+
+					eipDBRef.current = eipDoc;
+
+					if (!eipDBRef.current) {
+						console.error("Failed to initialize eipDBRef.current after open.");
+						if (isMounted) {
+							setDbError("Failed to initialize database instance.");
+							setIsLoadingEip(false);
+						}
+						return;
+					}
+
+					eipDBRef.current.events.on("update", updateHandler);
+
+					// Load the initial content and comments
+					const fetchedEipData = await eipDBRef.current.get("special-id-for-eip");
+					console.log("fetchedEipData", fetchedEipData);
+					const eipContent = fetchedEipData?.value as IEIP;
+					const comments: IComment[] = [];
+					for await (const record of eipDBRef.current.iterator({ limit: -1 })) {
+						// console.log("record", record);
+						if (record.key === "special-id-for-eip") {
+							continue;
+						} else {
+							const comment = record.value as IComment;
+							comments.push(comment);
+						}
+					}
+
+					if (isMounted) {
+						console.log("Fetched EIP from DB:", eipContent);
+						console.log(`Fetched ${comments.length} comments from DB`);
+						setEip(eipContent);
+						setComments(comments);
+					}
+				} catch (error) {
+					console.error("Error loading EIP from OrbitDB:", error);
+					if (isMounted) {
+						setDbError(error instanceof Error ? error.message : "Unknown error loading EIP");
+					}
+				} finally {
+					if (isMounted) {
+						setIsLoadingEip(false);
+					}
+				}
+			}
+		};
+
+		openAndLoadDatabase();
+
+		return () => {
+			isMounted = false;
+			if (eipDBRef.current) {
+				console.log("Cleaning up EIP database listener and closing connection:", dbAddress);
+				eipDBRef.current.close();
+				eipDBRef.current = null;
+			}
+		};
+	}, [readOrbitdb, dbAddress, eipId]);
 
 	const handleAddComment = (e: React.FormEvent) => {
 		e.preventDefault();
+		// TODO: add user identity to the comment and insert to db
 		if (!newCommentText.trim() || !eip) return;
 
 		const newComment: IComment = {
 			id: `comment-${Date.now()}`,
 			eipId: eip.id,
 			createdBy: "CurrentUser", // Replace with actual user
-			text: newCommentText,
-			createdAt: Date.now(),
+			content: newCommentText,
+			createdAt: new Date(),
 			parentId: null,
 		};
 		setComments((prevComments) => [newComment, ...prevComments]);
@@ -122,8 +253,8 @@ const EIPPage: React.FC = () => {
 			id: `reply-${parentId}-${Date.now()}`,
 			eipId: eip.id,
 			createdBy: "CurrentUser", // Replace with actual user
-			text: replyText,
-			createdAt: Date.now(),
+			content: replyText,
+			createdAt: new Date(),
 			parentId: parentId,
 		};
 		setComments((prevComments) => [...prevComments, newReply]); // Add new reply to the flat list
@@ -141,9 +272,6 @@ const EIPPage: React.FC = () => {
 		<div>
 			<h1>{eip.title}</h1>
 			<p>
-				<i>Associated with: {eip.title}</i>
-			</p>
-			<p>
 				<strong>EIP Status:</strong> {eip.status}
 			</p>
 			<p>
@@ -153,7 +281,7 @@ const EIPPage: React.FC = () => {
 				<strong>EIP Description:</strong> {eip.description}
 			</p>
 			<p>
-				<strong>Chamber Editability:</strong> {editable ? "Editable" : "Read-only"}
+				<strong>Author(s):</strong> {eip.authors.join(", ")}
 			</p>
 
 			<hr style={{ margin: "20px 0" }} />

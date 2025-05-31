@@ -43,7 +43,7 @@ export const bootstrapConfig = {
 };
 
 // export const DBFINDER_ADDRESS = "/orbitdb/zdpuAwHvrRnh7PzhE89FUUM2eMrdpwGs8SRPS41JYiSLGoY8u";
-export const DBFINDER_ADDRESS = "/orbitdb/zdpuAptogZWxspXw62z2Ta3M15XxGSEJCYK7qk963byFGmGjs";
+export const DBFINDER_ADDRESS = "/orbitdb/zdpuAto2aCYSg9fhVtJJaZZEBx2Xaio6RRfFNj2jNXhmxXaLE";
 
 //// Based on the structure returned by OrbitDBIdentityProviderEthereum
 //type OrbitDBIdentityInstance = () => Promise<{
@@ -94,7 +94,13 @@ const setupLibp2p = async (): Promise<Libp2p<DefaultLibp2pServices>> => {
 			dcutr: dcutr(),
 			identify: identify(),
 			identifyPush: identifyPush(),
-			pubsub: gossipsub({ allowPublishToZeroTopicPeers: true }),
+			pubsub: gossipsub({
+				allowPublishToZeroTopicPeers: true,
+				fallbackToFloodsub: true,
+				scoreParams: {
+					IPColocationFactorWeight: 0,
+				},
+			}),
 			autonat: autoNAT(),
 			//delegatedRouting: () =>
 			//  createDelegatedRoutingV1HttpApiClient(
@@ -169,6 +175,7 @@ export const HeliaProvider = ({ children }: { children: React.ReactNode }) => {
 			setFs(unixfs(helia));
 			setReadOrbitDB(readOrbitdb);
 			startingRef.current = false;
+			console.log("Helia started");
 		} catch (e) {
 			console.error(e);
 			setError(true);

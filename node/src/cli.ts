@@ -34,7 +34,7 @@ import { Alchemy, Network } from "alchemy-sdk";
 import crypto from "crypto";
 import { libp2pRouting } from "@helia/routers";
 import * as dotenv from "dotenv";
-import { placeholderEIPs } from "./placeholderData.js";
+import { placeholderComments, placeholderEIPs } from "./placeholderData.js";
 import { type ICoreEIPInfo } from "@dsync/types";
 
 // add a cmd to add a orbit db id to the access controller of the given db addr
@@ -99,7 +99,13 @@ async function startOrbitDB(addresses: string[] = []) {
 			dcutr: dcutr(),
 			identify: identify(),
 			identifyPush: identifyPush(),
-			pubsub: gossipsub({ allowPublishToZeroTopicPeers: true }),
+			pubsub: gossipsub({
+				allowPublishToZeroTopicPeers: true,
+				fallbackToFloodsub: true,
+				scoreParams: {
+					IPColocationFactorWeight: 0,
+				},
+			}),
 			autonat: autoNAT(),
 			autoTLS: autoTLS(),
 			upnp: uPnPNAT(),
@@ -194,6 +200,13 @@ program
 		// 	}),
 		// });
 
+		// TEST:
+		const testKV = await orbitdb.open("/orbitdb/zdpuB3UdPyM3A4mW7mr54nwTZLyTderAQ37FJ9dNzE6UXUVfY", {
+			type: "keyvalue",
+		});
+		console.log("testKV", testKV.address.toString());
+
+		// Creating the DBFinder, make sure the node's orbitdb id is in the access controller
 		const DBFINDER_NAME = "dbfinder";
 
 		console.log("orbitdb id", orbitdb.identity.id);
@@ -206,7 +219,7 @@ program
 
 		console.log("DBFinder address", DBFinder.address.toString());
 		DBFinder.events.on("update", async (entry: any) => {
-			console.log("Database update:", entry.payload.value);
+			// console.log("Database update:", entry.payload.value);
 		});
 		DBFinder.events.on("error", (error: any) => {
 			console.error("Database error:", error);
@@ -223,19 +236,74 @@ program
 		});
 
 		for (const eip of placeholderEIPs) {
-			await DBFinder.put(
-				eip.id.toString(),
-				JSON.stringify({
-					id: eip.id,
-					title: eip.title,
-					status: eip.status,
-					category: eip.category,
-				} as ICoreEIPInfo)
-			);
+			const eipDoc = await orbitdb.open(eip.dbAddress, {
+				type: "documents",
+				AccessController: IPFSAccessController({ write: [orbitdb.identity.id] }),
+			});
+			eip.dbAddress = eipDoc.address.toString();
+			const coreInfo: ICoreEIPInfo = {
+				id: eip.id,
+				title: eip.title,
+				status: eip.status,
+				category: eip.category,
+				dbAddress: eip.dbAddress,
+			};
+			await DBFinder.put(eip.id.toString(), JSON.stringify(coreInfo));
 		}
+		console.log("Inserted data into DBFinder");
 		for await (const record of DBFinder.iterator()) {
 			console.log("record", JSON.parse(record.value) as ICoreEIPInfo);
 		}
+
+		// Creating documents for each eip, inserting information and comments
+		for (const eip of placeholderEIPs) {
+			const eipDoc = await orbitdb.open(eip.dbAddress, { type: "documents" });
+			await eipDoc.put({
+				_id: "special-id-for-eip",
+				title: eip.title,
+				description: eip.description,
+				content: eip.content,
+				status: eip.status,
+				category: eip.category,
+				authors: eip.authors,
+				createdAt: eip.createdAt.toISOString(),
+				updatedAt: eip.updatedAt.toISOString(),
+				requires: eip.requires,
+				dbAddress: eip.dbAddress,
+			});
+			// console.log("Completed inserting eip data", eip.id);
+			// console.log("eipAddress", eip.dbAddress);
+			// console.log("Completed inserting eip data", eip.id);
+			// console.log("eipDoc", eipAddress);
+			// for (const record of await eipDoc.all()) {
+			// 	console.log("record", record);
+			// }
+			for (const comment of placeholderComments) {
+				if (comment.eipId === eip.id) {
+					await eipDoc.put({
+						_id: comment.id,
+						eipId: comment.eipId,
+						content: comment.content,
+						createdBy: comment.createdBy,
+						createdAt: comment.createdAt.toISOString(),
+						parentId: comment.parentId,
+					});
+				}
+			}
+			console.log("inserted eip data", eip.id);
+		}
+
+		// for await (const record of DBFinder.iterator()) {
+		// 	const recordValue = JSON.parse(record.value) as ICoreEIPInfo;
+		// 	console.log("record", recordValue);
+		// 	const fullEip = await orbitdb.open(recordValue.dbAddress, { type: "documents" });
+		// 	console.log("fullEip", fullEip.address.toString());
+		// 	for await (const eipRecord of fullEip.iterator()) {
+		// 		console.log("eipRecord", eipRecord);
+		// 	}
+		// }
+
+		console.log("Completed inserting placeholder data");
 
 		// what is left:
 		// - add commenters array to the smart contract, create access controller for that

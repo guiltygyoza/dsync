@@ -52,7 +52,7 @@ const randomAuthors = [
 	"author 10",
 ];
 
-const numEIPs = 1000;
+const numEIPs = 100;
 export const placeholderEIPs: IEIP[] = [];
 
 for (let i = 1; i < numEIPs; i++) {
@@ -81,56 +81,29 @@ for (let i = 1; i < numEIPs; i++) {
 			}
 			return requires;
 		})(),
+		dbAddress: `orbitdb/${i}`,
 	});
 }
 
-export const placeholderComments: IComment[] = [
-	{
-		id: "comment-1",
-		eipId: 1,
-		text: "This is a great proposal for EIP-1!",
-		createdBy: "UserA",
-		createdAt: Date.now() - 5000000,
-		parentId: null,
-	},
-	{
-		id: "reply-1-1",
-		eipId: 1,
-		text: "I agree with UserA!",
-		createdBy: "UserB",
-		createdAt: Date.now() - 4000000,
-		parentId: "comment-1",
-	},
-	{
-		id: "comment-2",
-		eipId: 1,
-		text: "I have some concerns about section 2 of EIP-1.",
-		createdBy: "UserC",
-		createdAt: Date.now() - 3000000,
-		parentId: null,
-	},
-	{
-		id: "comment-3",
-		eipId: 2,
-		text: "Looking forward to the review of EIP-2.",
-		createdBy: "UserD",
-		createdAt: Date.now() - 2000000,
-		parentId: null,
-	},
-	{
-		id: "comment-4",
-		eipId: 2,
-		text: "I have some concerns about section 2 of EIP-2.",
-		createdBy: "UserE",
-		createdAt: Date.now() - 1000000,
-		parentId: null,
-	},
-	{
-		id: "comment-5",
-		eipId: 2,
-		text: "I have some concerns about section 2 of EIP-2.",
-		createdBy: "UserE",
-		createdAt: Date.now() - 1000000,
-		parentId: null,
-	},
+const randomCommenters = ["UserA", "UserB", "UserC", "UserD", "UserE"];
+const randomCommentContents = [
+	"# This is a great proposal",
+	"# I agree with UserA",
+	"# I have some concerns about section 2",
+	"# Looking forward to the review",
+	"# I have some concerns about section 2",
 ];
+
+const numComments = 100;
+export const placeholderComments: IComment[] = [];
+
+for (let i = 0; i < numComments; i++) {
+	placeholderComments.push({
+		id: `comment-${i}`,
+		eipId: Math.floor(Math.random() * numEIPs) + 1,
+		content: randomCommentContents[i % randomCommentContents.length],
+		createdBy: randomCommenters[i % randomCommenters.length],
+		createdAt: new Date(Date.now() - i * 1000),
+		parentId: i % 2 === 0 ? null : `comment-${Math.floor(Math.random() * (i - 1))}`,
+	});
+}
