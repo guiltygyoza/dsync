@@ -222,7 +222,9 @@ const EipDisplayTable: React.FC = () => {
 
 						return (
 							<section key={category} id={category.toLowerCase()} className="category-section">
-								<h2 className="category-title">{category}</h2>
+								<h2 className="category-title">
+									{category} ({eipsInCategory.length})
+								</h2>
 								{Array.from(statusMap.entries()).map(([status, eipList]) => {
 									if (eipList.length === 0) return null;
 									const expanded = isExpanded(category, status);
@@ -235,7 +237,7 @@ const EipDisplayTable: React.FC = () => {
 														toggleSection(category, status);
 													}}
 												>
-													{status}
+													{status} ({eipList.length})
 												</summary>
 												<table className="eip-table">
 													<thead>
