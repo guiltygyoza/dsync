@@ -1,7 +1,38 @@
-import React, { useContext, useState, useEffect, useMemo, useRef } from "react";
+import React, { useContext, useState, useEffect, useMemo, useRef, type TextareaHTMLAttributes, type FC } from "react";
 import { useParams, useLocation } from "react-router-dom";
+import Markdown from "react-markdown";
+import rehypeExternalLinks from "rehype-external-links";
 import { type IEIP, type IComment, EIP_STATUS } from "@dsync/types";
 import { DBFINDER_ADDRESS, HeliaContext } from "../provider/HeliaProvider";
+
+// Define AutogrowTextarea component
+interface AutogrowTextareaProps extends Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "value" | "onChange"> {
+	value: string;
+	onChange: (event: React.ChangeEvent<HTMLTextAreaElement>) => void;
+}
+
+const AutogrowTextarea: FC<AutogrowTextareaProps> = ({ value, onChange, style, ...rest }) => {
+	const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+	useEffect(() => {
+		const textArea = textareaRef.current;
+		if (textArea) {
+			textArea.style.overflowY = "hidden"; // Prevent scrollbar during calculation
+			textArea.style.height = "auto"; // Reset height to recalculate
+			textArea.style.height = `${textArea.scrollHeight}px`; // Set to scroll height
+		}
+	}, [value]); // Adjust height when value changes
+
+	return (
+		<textarea
+			ref={textareaRef}
+			value={value}
+			onChange={onChange}
+			style={{ ...style, boxSizing: "border-box", overflowY: "hidden" }} // Ensure border-box and keep overflow hidden
+			{...rest}
+		/>
+	);
+};
 
 const isEIPEditable = (status: EIP_STATUS): boolean => {
 	return [EIP_STATUS.DRAFT, EIP_STATUS.REVIEW, EIP_STATUS.LAST_CALL, EIP_STATUS.LIVING].includes(status);
@@ -17,12 +48,12 @@ interface ICommentProps {
 
 interface DocInterface {
 	key: string;
-	value: any;
+	value: IEIP | IComment;
 }
 
 // Define interfaces based on usage to replace 'any' types for dbFinder and event entry
 interface MinimalDocDatabaseInterface {
-	iterator(options?: { limit?: number }): AsyncIterableIterator<{ key: string; value: any }>;
+	iterator(options?: { limit?: number }): AsyncIterableIterator<DocInterface>;
 	events: {
 		on(eventName: string, callback: (entry: StoreEventEntry) => void): void;
 		off(eventName: string, callback?: (entry: StoreEventEntry) => void): void;
@@ -60,10 +91,14 @@ const CommentItem: React.FC<ICommentProps> = ({ comment, allComments, onReply, i
 			<p>
 				<strong>{comment.createdBy}</strong> ({new Date(comment.createdAt).toLocaleDateString()}):
 			</p>
-			<p>{comment.content}</p>
+			<Markdown rehypePlugins={[[rehypeExternalLinks, { target: "_blank", rel: ["noopener", "noreferrer"] }]]}>
+				{comment.content}
+			</Markdown>
 			{isEditable && (
 				<button
-					onClick={() => setShowReplyForm(!showReplyForm)}
+					onClick={() => {
+						setShowReplyForm(!showReplyForm);
+					}}
 					style={{ fontSize: "0.8em", padding: "2px 5px" }}
 				>
 					{showReplyForm ? "Cancel" : "Reply"}
@@ -71,15 +106,39 @@ const CommentItem: React.FC<ICommentProps> = ({ comment, allComments, onReply, i
 			)}
 			{showReplyForm && isEditable && (
 				<form onSubmit={handleReplySubmit} style={{ marginTop: "5px" }}>
-					<textarea
+					<AutogrowTextarea
 						value={replyText}
 						onChange={(e) => setReplyText(e.target.value)}
-						placeholder="Write a reply..."
-						rows={2}
+						placeholder="Write a reply (Markdown supported)..."
+						rows={3}
 						style={{ width: "100%", marginBottom: "5px" }}
 						required
 					/>
-					<button type="submit">Post Reply</button>
+					{replyText.trim() && (
+						<div
+							style={{
+								border: "1px dashed #ddd",
+								padding: "5px",
+								minHeight: "40px",
+								fontSize: "0.9em",
+								marginBottom: "10px",
+							}}
+						>
+							<p style={{ fontSize: "0.8em", color: "#555", marginTop: 0, marginBottom: "5px" }}>
+								<em>Live Preview:</em>
+							</p>
+							<Markdown
+								rehypePlugins={[
+									[rehypeExternalLinks, { target: "_blank", rel: ["noopener", "noreferrer"] }],
+								]}
+							>
+								{replyText}
+							</Markdown>
+						</div>
+					)}
+					<button type="submit" style={{ fontSize: "0.9em", padding: "3px 7px", marginTop: "5px" }}>
+						Post Reply
+					</button>
 				</form>
 			)}
 			{replies.length > 0 && (
@@ -113,11 +172,14 @@ const EIPPage: React.FC = () => {
 	const { eipId } = useParams<{ eipId: string }>();
 	const [eip, setEip] = useState<IEIP | null>(null);
 	const [comments, setComments] = useState<IComment[]>([]);
-	const [newCommentText, setNewCommentText] = useState("");
+	const [newCommentText, setNewCommentText] = useState<string>(() => {
+		const savedComment = localStorage.getItem(`draft-comment-${eipId}`);
+		return savedComment || "";
+	});
 	const [isLoadingEip, setIsLoadingEip] = useState<boolean>(true);
 	const [dbError, setDbError] = useState<string | null>(null);
 
-	const { writeOrbitDB: writeOrbitdb, readOrbitDB: readOrbitdb } = useContext(HeliaContext);
+	const { readOrbitDB: readOrbitdb } = useContext(HeliaContext);
 	const location = useLocation();
 	const dbAddress = useRef<string | null>(location.state?.dbAddress);
 
@@ -230,6 +292,12 @@ const EIPPage: React.FC = () => {
 		};
 	}, [readOrbitdb, dbAddress, eipId]);
 
+	useEffect(() => {
+		if (eipId) {
+			localStorage.setItem(`draft-comment-${eipId}`, newCommentText);
+		}
+	}, [newCommentText, eipId]);
+
 	const handleAddComment = (e: React.FormEvent) => {
 		e.preventDefault();
 		// TODO: add user identity to the comment and insert to db
@@ -245,6 +313,9 @@ const EIPPage: React.FC = () => {
 		};
 		setComments((prevComments) => [newComment, ...prevComments]);
 		setNewCommentText("");
+		if (eipId) {
+			localStorage.removeItem(`draft-comment-${eipId}`);
+		}
 	};
 
 	const handleReplyToComment = (parentId: string, replyText: string) => {
@@ -264,8 +335,20 @@ const EIPPage: React.FC = () => {
 	const editable = eip ? isEIPEditable(eip.status) : false;
 	const topLevelComments = useMemo(() => comments.filter((c) => c.parentId === null), [comments]);
 
+	if (isLoadingEip) {
+		return <div>Loading EIP data... (eipId: {eipId})</div>;
+	}
+
+	if (dbError) {
+		return (
+			<div>
+				Error loading EIP: {dbError} (eipId: {eipId})
+			</div>
+		);
+	}
+
 	if (!eip) {
-		return <div>Loading EIP details or EIP not found... (eipId: {eipId})</div>;
+		return <div>EIP not found or failed to load. (eipId: {eipId})</div>;
 	}
 
 	return (
@@ -283,21 +366,63 @@ const EIPPage: React.FC = () => {
 			<p>
 				<strong>Author(s):</strong> {eip.authors.join(", ")}
 			</p>
+			<p>
+				<strong>Created:</strong> {new Date(eip.createdAt).toLocaleString()}
+			</p>
+			<p>
+				<strong>Last Updated:</strong> {new Date(eip.updatedAt).toLocaleString()}
+			</p>
+			{eip.requires && eip.requires.length > 0 && (
+				<p>
+					<strong>Requires:</strong> EIP-{eip.requires.join(", EIP-")}
+				</p>
+			)}
+			<p>
+				<strong>Content:</strong>
+			</p>
+			<Markdown rehypePlugins={[[rehypeExternalLinks, { target: "_blank", rel: ["noopener", "noreferrer"] }]]}>
+				{eip.content}
+			</Markdown>
 
 			<hr style={{ margin: "20px 0" }} />
 
 			<h2>Comments</h2>
 			{editable && (
 				<form onSubmit={handleAddComment} style={{ marginBottom: "20px" }}>
-					<textarea
-						value={newCommentText}
-						onChange={(e) => setNewCommentText(e.target.value)}
-						placeholder="Write a comment..."
-						rows={3}
-						style={{ width: "100%", marginBottom: "10px" }}
-						required
-					/>
-					<button type="submit">Post Comment</button>
+					<div style={{ marginBottom: "10px" }}>
+						<AutogrowTextarea
+							value={newCommentText}
+							onChange={(e) => setNewCommentText(e.target.value)}
+							placeholder="Write a comment (Markdown supported)..."
+							rows={4}
+							style={{ width: "100%", marginBottom: "5px" }}
+							required
+						/>
+						{newCommentText.trim() && (
+							<div
+								style={{
+									border: "1px dashed #ddd",
+									padding: "10px",
+									minHeight: "60px",
+									marginBottom: "10px",
+								}}
+							>
+								<p style={{ fontSize: "0.9em", color: "#555", marginTop: 0, marginBottom: "5px" }}>
+									<em>Live Preview:</em>
+								</p>
+								<Markdown
+									rehypePlugins={[
+										[rehypeExternalLinks, { target: "_blank", rel: ["noopener", "noreferrer"] }],
+									]}
+								>
+									{newCommentText}
+								</Markdown>
+							</div>
+						)}
+					</div>
+					<button type="submit" style={{ marginTop: "5px" }}>
+						Post Comment
+					</button>
 				</form>
 			)}
 			{!editable && (
