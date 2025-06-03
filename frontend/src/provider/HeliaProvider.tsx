@@ -1,15 +1,16 @@
 import { unixfs, type UnixFS } from "@helia/unixfs";
 import type { Libp2p } from "@libp2p/interface";
 import { noise } from "@chainsafe/libp2p-noise";
-import { tls } from "@libp2p/tls";
+// import { tls } from "@libp2p/tls";
 import { gossipsub } from "@chainsafe/libp2p-gossipsub";
-import { createDelegatedRoutingV1HttpApiClient } from "@helia/delegated-routing-v1-http-api-client";
+// import { createDelegatedRoutingV1HttpApiClient } from "@helia/delegated-routing-v1-http-api-client";
 import { bootstrap } from "@libp2p/bootstrap";
-import { delegatedHTTPRoutingDefaults, libp2pRouting } from "@helia/routers";
-import { createOrbitDB, IPFSAccessController, useIdentityProvider, type OrbitDB } from "@orbitdb/core";
-import { uPnPNAT } from "@libp2p/upnp-nat";
-import { ipnsSelector } from "ipns/selector";
-import { ipnsValidator } from "ipns/validator";
+import { libp2pRouting } from "@helia/routers";
+// @ts-expect-error -- .
+import { createOrbitDB, useIdentityProvider, type OrbitDB } from "@orbitdb/core";
+// import { uPnPNAT } from "@libp2p/upnp-nat";
+// import { ipnsSelector } from "ipns/selector";
+// import { ipnsValidator } from "ipns/validator";
 import { createHelia, type DefaultLibp2pServices, type HeliaLibp2p } from "helia";
 import { createLibp2p } from "libp2p";
 import { useEffect, useState, useCallback, createContext, useMemo, useRef } from "react";
@@ -22,10 +23,10 @@ import { circuitRelayTransport } from "@libp2p/circuit-relay-v2";
 import * as filters from "@libp2p/websockets/filters";
 import { identify, identifyPush } from "@libp2p/identify";
 import { autoNAT } from "@libp2p/autonat";
-import { kadDHT } from "@libp2p/kad-dht";
+// import { kadDHT } from "@libp2p/kad-dht";
 import { devToolsMetrics } from "@libp2p/devtools-metrics";
-import { peerIdFromString } from "@libp2p/peer-id";
-import { tcp } from "@libp2p/tcp";
+// import { peerIdFromString } from "@libp2p/peer-id";
+// import { tcp } from "@libp2p/tcp";
 import { LevelBlockstore } from "blockstore-level";
 
 import { useAccount, useSignMessage } from "wagmi";
@@ -58,12 +59,14 @@ export const HeliaContext = createContext<{
 	readOrbitDB: OrbitDB | null; // Add OrbitDB instance to context
 	writeOrbitDB: () => Promise<OrbitDB>;
 	error: boolean;
+	starting: boolean;
 }>({
 	helia: null,
 	fs: null,
 	readOrbitDB: null, // Initialize orbitDB as null
 	writeOrbitDB: async () => null,
 	error: false,
+	starting: false,
 });
 
 const createWalletFacade = (address: string, signMessageAsync: (args: { message: string }) => Promise<string>) => ({
@@ -196,6 +199,7 @@ export const HeliaProvider = ({ children }: { children: React.ReactNode }) => {
 				writeOrbitDB: writeOrbitDBFn,
 				readOrbitDB: readOrbitDB,
 				error,
+				starting: startingRef.current,
 			}}
 		>
 			{children}

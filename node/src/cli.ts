@@ -3,6 +3,7 @@
 
 import { Command } from "commander";
 import { createHelia } from "helia";
+// @ts-expect-error -- .
 import { createOrbitDB, IPFSAccessController } from "@orbitdb/core";
 import { createLibp2p } from "libp2p";
 import { noise } from "@chainsafe/libp2p-noise";
@@ -30,8 +31,8 @@ import { keychain } from "@libp2p/keychain";
 import { generateKeyPairFromSeed } from "@libp2p/crypto/keys";
 import express from "express";
 import type { Request, Response, NextFunction } from "express";
-import { Alchemy, Network } from "alchemy-sdk";
-import crypto from "crypto";
+// import { Alchemy, Network } from "alchemy-sdk";
+// import crypto from "crypto";
 import { libp2pRouting } from "@helia/routers";
 import * as dotenv from "dotenv";
 import { placeholderComments, placeholderEIPs } from "./placeholderData.js";
@@ -167,10 +168,10 @@ program
 			],
 		};
 
-		const alchemy = new Alchemy({
-			apiKey: ALCHEMY_API_KEY,
-			network: Network.ETH_SEPOLIA,
-		});
+		// const alchemy = new Alchemy({
+		// 	apiKey: ALCHEMY_API_KEY,
+		// 	network: Network.ETH_SEPOLIA,
+		// });
 
 		const { orbitdb, libp2p } = await startOrbitDB(addresses.listen);
 		console.log(libp2p.getMultiaddrs());
@@ -179,7 +180,7 @@ program
 			console.log("peer:connect", peerId.detail);
 		});
 
-		libp2p.addEventListener("transport:listening", (peerId) => {
+		libp2p.addEventListener("transport:listening", () => {
 			console.log("transport:listening", libp2p.getMultiaddrs());
 		});
 
@@ -218,19 +219,23 @@ program
 		});
 
 		console.log("DBFinder address", DBFinder.address.toString());
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		DBFinder.events.on("update", async (entry: any) => {
-			// console.log("Database update:", entry.payload.value);
+			console.log("Database update:", entry.payload.value);
 		});
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		DBFinder.events.on("error", (error: any) => {
 			console.error("Database error:", error);
 		});
 
-		DBFinder.events.on("join", async (peerId, heads) => {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		DBFinder.events.on("join", async (peerId: any) => {
 			// The peerId of the ipfs1 node.
 			console.log("join", peerId);
 		});
 
-		DBFinder.events.on("close", async (peerId, heads) => {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		DBFinder.events.on("close", async (peerId: any) => {
 			// The peerId of the ipfs1 node.
 			console.log("close", peerId);
 		});
@@ -347,6 +352,7 @@ program
 					data += chunk;
 				});
 				req.on("end", () => {
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
 					(req as any).rawBody = data;
 					next();
 				});
@@ -357,6 +363,7 @@ program
 
 		app.post("/alchemy-webhook", async (req: Request, res: Response) => {
 			// TODO
+			res.json(req.body);
 			res.status(200).send("Webhook received");
 		});
 

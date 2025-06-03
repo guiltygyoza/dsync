@@ -18,7 +18,6 @@
 		"@chainsafe/libp2p-gossipsub": "14.1.1",
 		"@chainsafe/libp2p-noise": "16.1.3",
 		"@chainsafe/libp2p-yamux": "7.0.1",
-		"@dsync/services": "workspace:*",
 		"@helia/delegated-routing-v1-http-api-client": "4.2.5",
 		"@helia/routers": "3.1.1",
 		"@ipshipyard/libp2p-auto-tls": "1.0.0",
