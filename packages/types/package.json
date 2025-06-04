@@ -1,0 +1,17 @@
+{
+	"name": "@dsync/types",
+	"version": "1.0.0",
+	"license": "MIT",
+	"description": "Shared type definitions for Dsync",
+	"type": "module",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"files": [
+		"dist"
+	],
+	"scripts": {
+		"build": "tsc -p tsconfig.json"
+	},
+	"keywords": [],
+	"author": ""
+}

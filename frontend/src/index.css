@@ -1,0 +1,170 @@
+body {
+	margin: 0;
+	padding: 0;
+	font-family:
+		-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans",
+		"Droid Sans", "Helvetica Neue", sans-serif;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	box-sizing: border-box;
+	background-color: var(--primary-background-color);
+	color: var(--primary-text-color);
+	transition:
+		background-color 0.3s ease,
+		color 0.3s ease;
+}
+
+:root {
+	font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+	line-height: 1.5;
+	font-weight: 400;
+
+	color-scheme: light dark;
+	--primary-background-color: #242424;
+	--primary-text-color: rgba(255, 255, 255, 0.87);
+
+	font-synthesis: none;
+	text-rendering: optimizeLegibility;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+a {
+	font-weight: 500;
+	color: #646cff;
+	text-decoration: inherit;
+}
+
+a:hover {
+	color: #535bf2;
+}
+
+h1 {
+	font-size: 3.2em;
+	line-height: 1.1;
+}
+
+button {
+	border-radius: 8px;
+	border: 1px solid transparent;
+	padding: 0.6em 1.2em;
+	font-size: 1em;
+	font-weight: 500;
+	font-family: inherit;
+	background-color: #1a1a1a;
+	cursor: pointer;
+	transition: border-color 0.25s;
+}
+
+button:hover {
+	border-color: #646cff;
+}
+
+button:focus,
+button:focus-visible {
+	outline: 4px auto -webkit-focus-ring-color;
+}
+
+@media (prefers-color-scheme: light) {
+	:root {
+		--primary-background-color: #ffffff;
+		--primary-text-color: #213547;
+	}
+
+	a:hover {
+		color: #747bff;
+	}
+
+	button {
+		background-color: #f9f9f9;
+	}
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--primary-background-color: #282c34;
+		--primary-text-color: #ffffff;
+	}
+
+	a:hover {
+		color: #747bff;
+	}
+
+	button {
+		background-color: #1a1a1a;
+	}
+}
+
+/* Light mode (default) */
+body.light-mode {
+	--primary-background-color: #ffffff;
+	--primary-text-color: #282c34;
+}
+
+.light-mode nav {
+	background-color: #f0f0f0;
+	/* Lighter navbar for light mode */
+	color: #282c34;
+}
+
+.light-mode nav a,
+.light-mode .walletAddress {
+	color: #282c34;
+}
+
+.light-mode li {
+	border-color: #ccc;
+}
+
+/* Dark mode */
+body.dark-mode {
+	--primary-background-color: #282c34;
+	--primary-text-color: #ffffff;
+}
+
+.dark-mode nav {
+	background-color: #1a1a1a;
+	/* Darker navbar for dark mode */
+	color: #ffffff;
+}
+
+.dark-mode nav a,
+.dark-mode .walletAddress {
+	color: #ffffff;
+}
+
+.dark-mode li {
+	border-color: #555;
+}
+
+.dark-mode button {
+	/* Add general dark mode button styles if needed, or style specific buttons */
+}
+
+.light-mode button {
+	background-color: #f0f0f0;
+	color: #282c34;
+}
+
+.dark-mode input,
+.dark-mode textarea {
+	background-color: #333;
+	color: #fff;
+	border: 1px solid #555;
+}
+
+.light-mode input,
+.light-mode textarea {
+	background-color: #f0f0f0;
+	color: #282c34;
+	border: 1px solid #ccc;
+}
+
+.dark-mode input::placeholder,
+.dark-mode textarea::placeholder {
+	color: #aaa;
+}
+
+code {
+	font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
+}

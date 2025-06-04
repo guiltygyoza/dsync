@@ -1,0 +1,213 @@
+/* Base styles (can be considered light theme defaults) */
+.category-header-nav {
+	display: flex;
+	gap: 15px;
+	padding: 10px;
+	border-bottom: 1px solid #e0e0e0; /* Lighter for light theme */
+	margin-bottom: 20px;
+	background-color: #f5f5f5; /* Light background */
+	border-radius: 4px;
+}
+
+.category-header-nav a {
+	color: #333333; /* Dark text for light theme */
+	text-decoration: none;
+	font-weight: bold;
+	padding: 5px 10px;
+	border-radius: 4px;
+	transition:
+		background-color 0.3s,
+		color 0.3s;
+}
+
+.category-header-nav a:hover,
+.category-header-nav a.active {
+	background-color: #555555; /* Darker background for active/hover on light theme */
+	color: #ffffff;
+}
+
+.category-section {
+	margin-bottom: 30px;
+}
+
+.category-title {
+	font-size: 2em;
+	color: #111111; /* Dark for light theme */
+	margin-bottom: 15px;
+	border-bottom: 2px solid #cccccc;
+	padding-bottom: 5px;
+}
+
+.status-group details {
+	border: 1px solid #e0e0e0;
+	border-radius: 5px;
+	margin-bottom: 15px;
+	overflow: hidden;
+	background-color: #ffffff; /* Light background for details content */
+}
+
+.status-group summary {
+	font-size: 1.5em;
+	padding: 15px;
+	cursor: pointer;
+	background-color: #f0f0f0; /* Light background for summary */
+	color: #222222; /* Dark text for summary */
+	list-style: none;
+	display: flex;
+	justify-content: space-between;
+	border-bottom: 1px solid #e0e0e0; /* Separator for light theme */
+}
+
+.status-group details[open] summary {
+	/* border-bottom remains the same or can be distinct if needed */
+}
+
+.status-group summary::-webkit-details-marker {
+	display: none;
+}
+
+.status-group summary::after {
+	content: "+";
+	font-weight: bold;
+	margin-left: 10px;
+	transition: transform 0.2s ease-in-out;
+}
+
+.status-group details[open] summary::after {
+	transform: rotate(45deg);
+}
+
+.eip-table {
+	width: 100%;
+	border-collapse: collapse;
+	margin-top: 0;
+	color: #333333; /* Default text color for light theme */
+}
+
+.eip-table th,
+.eip-table td {
+	text-align: left;
+	padding: 12px 15px;
+	border-bottom: 1px solid #dddddd; /* Light border for light theme */
+}
+
+.eip-table th {
+	background-color: #f7f7f7; /* Very light grey for table header in light theme */
+	color: #333333;
+	font-weight: bold;
+}
+
+.eip-table tr:hover td {
+	background-color: #f0f0f0; /* Lighter hover for light theme */
+}
+
+.eip-table a {
+	color: #007bff; /* Standard link blue for light theme */
+	text-decoration: none;
+}
+
+.eip-table a:hover {
+	text-decoration: underline;
+}
+
+/* Dark theme overrides */
+.dark-mode .category-header-nav {
+	border-bottom: 1px solid #444444;
+	background-color: #2c2c2c;
+}
+
+.dark-mode .category-header-nav a {
+	color: #cccccc;
+}
+
+.dark-mode .category-header-nav a:hover,
+.dark-mode .category-header-nav a.active {
+	background-color: #555555;
+	color: #ffffff;
+}
+
+.dark-mode .category-title {
+	color: #eeeeee;
+	border-bottom: 2px solid #555555;
+}
+
+.dark-mode .status-group details {
+	border: 1px solid #333333;
+	background-color: #282828; /* Darker background for details content */
+}
+
+.dark-mode .status-group summary {
+	background-color: #1e1e1e;
+	color: #eeeeee;
+	border-bottom: 1px solid #333333;
+}
+
+/* .dark-mode .status-group details[open] summary {} */ /* Keep default or override if needed */
+
+.dark-mode .eip-table {
+	color: #cccccc;
+}
+
+.dark-mode .eip-table th,
+.dark-mode .eip-table td {
+	border-bottom: 1px solid #383838;
+}
+
+.dark-mode .eip-table th {
+	background-color: #222222;
+	color: #dddddd;
+}
+
+.dark-mode .eip-table tr:hover td {
+	background-color: #3a3a3a;
+}
+
+.dark-mode .eip-table a {
+	color: #70a1ff; /* Light blue for links in dark mode */
+}
+
+.eip-number {
+	width: 10%;
+}
+.eip-title {
+	width: 60%;
+}
+.eip-author {
+	width: 30%;
+}
+
+.empty-status {
+	padding: 15px;
+	color: #888888;
+}
+
+.dark-mode .empty-status {
+	color: #666666;
+}
+
+.loading-indicator {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	padding: 10px 0;
+}
+  
+  /* Styles for the smaller spinner within the loading-indicator */
+.loading-indicator .spinner {
+	border: 3px solid rgba(0, 0, 0, 0.1); /* Adjust border thickness if needed */
+	width: 16px;  /* Smaller width */
+	height: 16px; /* Smaller height */
+	border-radius: 50%;
+	border-left-color: #09f; /* Or your preferred spinner color */
+	animation: spin 1s linear infinite; /* 'linear' can look smoother for small spinners */
+}
+
+@keyframes spin {
+	0% {
+	  transform: rotate(0deg);
+	}
+	100% {
+	  transform: rotate(360deg);
+	}
+}
