@@ -141,11 +141,23 @@ body.dark-mode {
 	/* Add general dark mode button styles if needed, or style specific buttons */
 }
 
+.light-mode button {
+	background-color: #f0f0f0;
+	color: #282c34;
+}
+
 .dark-mode input,
 .dark-mode textarea {
 	background-color: #333;
 	color: #fff;
 	border: 1px solid #555;
+}
+
+.light-mode input,
+.light-mode textarea {
+	background-color: #f0f0f0;
+	color: #282c34;
+	border: 1px solid #ccc;
 }
 
 .dark-mode input::placeholder,

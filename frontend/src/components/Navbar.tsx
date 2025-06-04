@@ -37,11 +37,6 @@ const Navbar: React.FC<NavbarProps> = ({ theme, toggleTheme }) => {
 				<img src="src/assets/eth-icon.png" alt="Ethereum" style={styles.ethIcon} />
 				Ethereum Congress
 			</Link>
-			<div style={styles.linksContainer}>
-				<Link to="/eips/new" style={styles.link}>
-					Create an EIP
-				</Link>
-			</div>
 			<div style={styles.walletAndThemeContainer}>
 				<ConnectWallet theme={theme} />
 				<button onClick={toggleTheme} style={buttonStyles}>

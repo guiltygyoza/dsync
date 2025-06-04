@@ -125,7 +125,7 @@ const CommentItem: React.FC<ICommentProps> = ({ comment, allComments, onReply, i
 							}}
 						>
 							<p style={{ fontSize: "0.8em", color: "#555", marginTop: 0, marginBottom: "5px" }}>
-								<em>Live Preview:</em>
+								<em>Preview:</em>
 							</p>
 							<Markdown
 								rehypePlugins={[
@@ -181,19 +181,7 @@ const EIPPage: React.FC = () => {
 
 	const { readOrbitDB: readOrbitdb } = useContext(HeliaContext);
 	const location = useLocation();
-	const dbAddress = useRef<string | null>(location.state?.dbAddress);
-
-	if (!dbAddress.current) {
-		const localStoredAddress = localStorage.getItem(`eip-${eipId}`);
-		if (localStoredAddress) {
-			dbAddress.current = localStoredAddress;
-			console.log("Fetched address from localStorage", dbAddress.current);
-		} else {
-			console.log("Need to fetch address from dbFinder");
-		}
-	} else {
-		console.log("Fetched address from forwarded state", dbAddress.current);
-	}
+	const dbAddress = useRef<string | null>(null);
 
 	const eipDBRef = useRef<MinimalDocDatabaseInterface | null>(null);
 
@@ -213,19 +201,61 @@ const EIPPage: React.FC = () => {
 						setDbError(null);
 					}
 
-					if (!dbAddress.current) {
-						console.log("Need to fetch address from dbFinder");
-						const dbFinder = await readOrbitdb.open(DBFINDER_ADDRESS);
-						const eipAddress = await dbFinder.get(`eip-${eipId}`);
-						dbAddress.current = eipAddress;
-						console.log("Fetched address from dbFinder", dbAddress.current);
-						dbFinder.close();
-					}
-					if (dbAddress.current) {
-						localStorage.setItem(`eip-${eipId}`, dbAddress.current);
+					let determinedDbAddress: string | null = null;
+					const addressFromState = location.state?.dbAddress as string | undefined;
+
+					if (addressFromState) {
+						determinedDbAddress = addressFromState;
+						console.log(
+							`Using EIP DB address from forwarded state for eipId ${eipId}: ${determinedDbAddress}`
+						);
+					} else {
+						const localStoredAddress = localStorage.getItem(`eip-${eipId}`);
+						if (localStoredAddress) {
+							determinedDbAddress = localStoredAddress;
+							console.log(
+								`Using EIP DB address from localStorage for eipId ${eipId}: ${determinedDbAddress}`
+							);
+						}
 					}
 
-					console.log(`Opening the read database at: ${dbAddress.current}`);
+					if (!determinedDbAddress) {
+						console.log(
+							`EIP DB address not in state or localStorage for eipId ${eipId}, attempting to fetch from dbFinder.`
+						);
+						const dbFinder = await readOrbitdb.open(DBFINDER_ADDRESS);
+						try {
+							const eipAddressFromFinder = await dbFinder.get(`eip-${eipId}`);
+							if (eipAddressFromFinder && typeof eipAddressFromFinder === "string") {
+								determinedDbAddress = eipAddressFromFinder;
+								console.log(
+									`Fetched EIP DB address from dbFinder for eipId ${eipId}: ${determinedDbAddress}`
+								);
+							} else {
+								if (isMounted) {
+									setDbError(`EIP address for eipId ${eipId} not found or invalid in dbFinder.`);
+									setIsLoadingEip(false);
+								}
+								await dbFinder.close();
+								return;
+							}
+						} finally {
+							await dbFinder.close();
+						}
+					}
+
+					if (determinedDbAddress) {
+						localStorage.setItem(`eip-${eipId}`, determinedDbAddress);
+						dbAddress.current = determinedDbAddress;
+					} else {
+						if (isMounted) {
+							setDbError(`Could not determine database address for EIP ${eipId}.`);
+							setIsLoadingEip(false);
+						}
+						return;
+					}
+
+					console.log(`Opening the EIP database at: ${dbAddress.current}`);
 					const eipDoc = await readOrbitdb.open(dbAddress.current);
 
 					if (!isMounted) {
@@ -246,26 +276,24 @@ const EIPPage: React.FC = () => {
 
 					eipDBRef.current.events.on("update", updateHandler);
 
-					// Load the initial content and comments
 					const fetchedEipData = await eipDBRef.current.get("special-id-for-eip");
 					console.log("fetchedEipData", fetchedEipData);
 					const eipContent = fetchedEipData?.value as IEIP;
-					const comments: IComment[] = [];
+					const loadedComments: IComment[] = [];
 					for await (const record of eipDBRef.current.iterator({ limit: -1 })) {
-						// console.log("record", record);
 						if (record.key === "special-id-for-eip") {
 							continue;
 						} else {
 							const comment = record.value as IComment;
-							comments.push(comment);
+							loadedComments.push(comment);
 						}
 					}
 
 					if (isMounted) {
 						console.log("Fetched EIP from DB:", eipContent);
-						console.log(`Fetched ${comments.length} comments from DB`);
+						console.log(`Fetched ${loadedComments.length} comments from DB`);
 						setEip(eipContent);
-						setComments(comments);
+						setComments(loadedComments);
 					}
 				} catch (error) {
 					console.error("Error loading EIP from OrbitDB:", error);
@@ -285,12 +313,13 @@ const EIPPage: React.FC = () => {
 		return () => {
 			isMounted = false;
 			if (eipDBRef.current) {
-				console.log("Cleaning up EIP database listener and closing connection:", dbAddress);
+				console.log("Cleaning up EIP database listener and closing connection for address:", dbAddress.current);
+				eipDBRef.current.events.off("update", updateHandler);
 				eipDBRef.current.close();
 				eipDBRef.current = null;
 			}
 		};
-	}, [readOrbitdb, dbAddress, eipId]);
+	}, [readOrbitdb, eipId, location.state?.dbAddress]);
 
 	useEffect(() => {
 		if (eipId) {
@@ -408,7 +437,7 @@ const EIPPage: React.FC = () => {
 								}}
 							>
 								<p style={{ fontSize: "0.9em", color: "#555", marginTop: 0, marginBottom: "5px" }}>
-									<em>Live Preview:</em>
+									<em>Preview:</em>
 								</p>
 								<Markdown
 									rehypePlugins={[
