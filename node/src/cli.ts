@@ -201,12 +201,6 @@ program
 		// 	}),
 		// });
 
-		// TEST:
-		const testKV = await orbitdb.open("/orbitdb/zdpuB3UdPyM3A4mW7mr54nwTZLyTderAQ37FJ9dNzE6UXUVfY", {
-			type: "keyvalue",
-		});
-		console.log("testKV", testKV.address.toString());
-
 		// Creating the DBFinder, make sure the node's orbitdb id is in the access controller
 		const DBFINDER_NAME = "dbfinder";
 
@@ -214,6 +208,7 @@ program
 		const DBFinder = await orbitdb.open(DBFINDER_NAME, {
 			type: "keyvalue",
 			AccessController: IPFSAccessController({
+				// TODO: hardcode the value when deployed
 				write: [orbitdb.identity.id],
 			}),
 		});
@@ -221,23 +216,23 @@ program
 		console.log("DBFinder address", DBFinder.address.toString());
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		DBFinder.events.on("update", async (entry: any) => {
-			console.log("Database update:", entry.payload.value);
+			console.log("DBFinder update:", entry.payload.value);
 		});
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		DBFinder.events.on("error", (error: any) => {
-			console.error("Database error:", error);
+			console.error("DBFinder error:", error);
 		});
 
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		DBFinder.events.on("join", async (peerId: any) => {
 			// The peerId of the ipfs1 node.
-			console.log("join", peerId);
+			console.log("DBFinder join, peerId:", peerId);
 		});
 
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		DBFinder.events.on("close", async (peerId: any) => {
 			// The peerId of the ipfs1 node.
-			console.log("close", peerId);
+			console.log("DBFinder close, peerId:", peerId);
 		});
 
 		for (const eip of placeholderEIPs) {

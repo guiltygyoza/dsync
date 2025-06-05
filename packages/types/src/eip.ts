@@ -23,6 +23,9 @@ export const AllEIPStatusValues = Object.values(EIP_STATUS);
 // Helper function to get all EIP_CATEGORY values
 export const AllEIPCategoryValues = Object.values(EIP_CATEGORY);
 
+// Used to fetch EIP data from EIP document DB
+export const SPECIAL_ID_FOR_EIP = "special-id-for-eip";
+
 export interface IEIP {
 	id: number;
 	title: string;
