@@ -175,7 +175,7 @@ const EIPPage: React.FC = () => {
 	const [isLoadingEip, setIsLoadingEip] = useState<boolean>(true);
 	const [dbError, setDbError] = useState<string | null>(null);
 
-	const { readOrbitDB: readOrbitdb } = useContext(HeliaContext);
+	const { readOrbitDB: readOrbitdb, writeOrbitDB: writeOrbitdb } = useContext(HeliaContext);
 	const location = useLocation();
 	const dbAddress = useRef<string | null>(null);
 	const commentDBAddress = useRef<string | null>(null);
@@ -405,19 +405,25 @@ const EIPPage: React.FC = () => {
 		}
 	}, [newCommentText, eipId]);
 
-	const handleAddComment = (e: React.FormEvent) => {
+	const handleAddComment = async (e: React.FormEvent) => {
 		e.preventDefault();
 		// TODO: add user identity to the comment and insert to db
-		if (!newCommentText.trim() || !eip) return;
+		const writeOrbitdbInstance = await writeOrbitdb();
+		console.log("writeOrbitdbInstance", writeOrbitdbInstance);
+		if (!newCommentText.trim() || !eip || !writeOrbitdbInstance) return;
+
+		const commentDoc = await writeOrbitdbInstance.open(eip.commentDBAddress);
+		console.log("commentDoc", commentDoc);
 
 		const newComment: IComment = {
 			id: `comment-${Date.now()}`,
 			eipId: eip.id,
-			createdBy: "CurrentUser", // Replace with actual user
+			createdBy: writeOrbitdbInstance.identity.id,
 			content: newCommentText,
 			createdAt: new Date(),
 			parentId: null,
 		};
+		await commentDoc.put(newComment.id, newComment);
 		setComments((prevComments) => [newComment, ...prevComments]);
 		setNewCommentText("");
 		if (eipId) {
@@ -425,17 +431,22 @@ const EIPPage: React.FC = () => {
 		}
 	};
 
-	const handleReplyToComment = (parentId: string, replyText: string) => {
+	const handleReplyToComment = async (parentId: string, replyText: string) => {
 		if (!eip) return;
+		const writeOrbitdbInstance = await writeOrbitdb();
+		if (!writeOrbitdbInstance) return;
+		const commentDoc = await writeOrbitdbInstance.open(eip.commentDBAddress);
+		console.log("commentDoc", commentDoc);
 		const newReply: IComment = {
 			id: `reply-${parentId}-${Date.now()}`,
 			eipId: eip.id,
-			createdBy: "CurrentUser", // Replace with actual user
+			createdBy: writeOrbitdbInstance.identity.id,
 			content: replyText,
 			createdAt: new Date(),
 			parentId: parentId,
 		};
-		setComments((prevComments) => [...prevComments, newReply]); // Add new reply to the flat list
+		await commentDoc.put(newReply.id, newReply);
+		setComments((prevComments) => [newReply, ...prevComments]);
 	};
 
 	// Moved these hooks before the early return
