@@ -182,13 +182,15 @@ const EIPPage: React.FC = () => {
 	const { readOrbitDB: readOrbitdb } = useContext(HeliaContext);
 	const location = useLocation();
 	const dbAddress = useRef<string | null>(null);
+	const commentDBAddress = useRef<string | null>(null);
 
 	const eipDBRef = useRef<MinimalDocDatabaseInterface | null>(null);
+	const commentDBRef = useRef<MinimalDocDatabaseInterface | null>(null);
 
 	useEffect(() => {
 		let isMounted = true;
 
-		const openAndLoadDatabase = async () => {
+		const openAndLoadEIPDatabase = async () => {
 			if (!readOrbitdb) {
 				if (isMounted) setIsLoadingEip(false);
 				return;
@@ -225,7 +227,7 @@ const EIPPage: React.FC = () => {
 						);
 						const dbFinder = await readOrbitdb.open(DBFINDER_ADDRESS);
 						try {
-							const eipAddressFromFinder = await dbFinder.get(`eip-${eipId}`);
+							const eipAddressFromFinder = await dbFinder.get(`${eipId}`);
 							if (eipAddressFromFinder && typeof eipAddressFromFinder === "string") {
 								determinedDbAddress = eipAddressFromFinder;
 								console.log(
@@ -279,21 +281,12 @@ const EIPPage: React.FC = () => {
 					const fetchedEipData = await eipDBRef.current.get("special-id-for-eip");
 					console.log("fetchedEipData", fetchedEipData);
 					const eipContent = fetchedEipData?.value as IEIP;
-					const loadedComments: IComment[] = [];
-					for await (const record of eipDBRef.current.iterator({ limit: -1 })) {
-						if (record.key === "special-id-for-eip") {
-							continue;
-						} else {
-							const comment = record.value as IComment;
-							loadedComments.push(comment);
-						}
-					}
+					commentDBAddress.current = eipContent.commentDBAddress;
 
 					if (isMounted) {
 						console.log("Fetched EIP from DB:", eipContent);
-						console.log(`Fetched ${loadedComments.length} comments from DB`);
 						setEip(eipContent);
-						setComments(loadedComments);
+						await openAndLoadCommentDatabase();
 					}
 				} catch (error) {
 					console.error("Error loading EIP from OrbitDB:", error);
@@ -308,7 +301,72 @@ const EIPPage: React.FC = () => {
 			}
 		};
 
-		openAndLoadDatabase();
+		const openAndLoadCommentDatabase = async () => {
+			console.log("openAndLoadCommentDatabase", commentDBAddress.current);
+			if (!readOrbitdb) {
+				if (isMounted) setIsLoadingEip(false);
+				return;
+			}
+
+			if (!commentDBRef.current) {
+				try {
+					if (isMounted) {
+						setIsLoadingEip(true);
+						setDbError(null);
+					}
+					if (!commentDBAddress.current) {
+						console.error("Comment DB address not found");
+						return;
+					}
+
+					console.log("opening comment db at", commentDBAddress.current);
+					const commentDoc = await readOrbitdb.open(commentDBAddress.current);
+
+					if (!isMounted) {
+						if (commentDoc) commentDoc.close();
+						return;
+					}
+					commentDBRef.current = commentDoc;
+
+					if (!commentDBRef.current) {
+						console.error("Failed to initialize commentDBRef.current after open.");
+						if (isMounted) {
+							setDbError("Failed to initialize database instance.");
+							setIsLoadingEip(false);
+						}
+						return;
+					}
+
+					commentDBRef.current.events.on("update", updateHandler);
+
+					const loadedComments: IComment[] = [];
+					for await (const record of commentDBRef.current.iterator({ limit: -1 })) {
+						if (record.key === "special-id-for-eip") {
+							continue;
+						} else {
+							const comment = record.value as IComment;
+							loadedComments.push(comment);
+						}
+					}
+					if (isMounted) {
+						console.log("loadedComments", loadedComments);
+						console.log("Loaded comments from DB:", loadedComments.length);
+						setComments(loadedComments);
+					}
+				} catch (error) {
+					console.error("Error loading comments from OrbitDB:", error);
+					if (isMounted) {
+						setDbError(error instanceof Error ? error.message : "Unknown error loading comments");
+					}
+				} finally {
+					if (isMounted) {
+						setIsLoadingEip(false);
+					}
+				}
+			}
+		};
+
+		openAndLoadEIPDatabase();
 
 		return () => {
 			isMounted = false;
@@ -317,6 +375,15 @@ const EIPPage: React.FC = () => {
 				eipDBRef.current.events.off("update", updateHandler);
 				eipDBRef.current.close();
 				eipDBRef.current = null;
+			}
+			if (commentDBRef.current) {
+				console.log(
+					"Cleaning up comment database listener and closing connection for address:",
+					commentDBAddress.current
+				);
+				commentDBRef.current.events.off("update", updateHandler);
+				commentDBRef.current.close();
+				commentDBRef.current = null;
 			}
 		};
 	}, [readOrbitdb, eipId, location.state?.dbAddress]);

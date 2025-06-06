@@ -38,8 +38,6 @@ import * as dotenv from "dotenv";
 import { placeholderEIPs } from "./placeholderData.js";
 import { addNewEIP } from "./orbitdb.js";
 
-// add a cmd to add a orbit db id to the access controller of the given db addr
-
 interface RunOptions {
 	tcpPort?: number;
 	wsPort?: number;
@@ -204,6 +202,7 @@ program
 		DBFinder.events.on("update", async (entry: any) => {
 			console.log("DBFinder update:", entry.payload.value);
 		});
+
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		DBFinder.events.on("error", (error: any) => {
 			console.error("DBFinder error:", error);
