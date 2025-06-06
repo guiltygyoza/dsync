@@ -37,6 +37,8 @@ import { libp2pRouting } from "@helia/routers";
 import * as dotenv from "dotenv";
 import { placeholderEIPs } from "./placeholderData.js";
 import { addNewEIP } from "./orbitdb.js";
+import type { ICoreEIPInfo } from "@dsync/types";
+import { SPECIAL_ID_FOR_EIP, type IEIP } from "@dsync/types";
 
 interface RunOptions {
 	tcpPort?: number;
@@ -201,6 +203,15 @@ program
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		DBFinder.events.on("update", async (entry: any) => {
 			console.log("DBFinder update:", entry.payload.value);
+			// await new Promise((resolve) => setTimeout(resolve, 1000));
+			// const coreInfo = JSON.parse(entry.payload.value) as ICoreEIPInfo;
+			// console.log("DBFinder update:", coreInfo);
+			// const eipDoc = await orbitdb.open(coreInfo.dbAddress, { type: "documents" });
+			// const eip = (await eipDoc.get(SPECIAL_ID_FOR_EIP)).value as IEIP;
+			// console.log("EIP:", eip);
+			// const commentDoc = await orbitdb.open(eip.commentDBAddress, { type: "documents" });
+			// const comments = await commentDoc.all();
+			// console.log("Comments:", comments);
 		});
 
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any

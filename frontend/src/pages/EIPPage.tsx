@@ -55,16 +55,18 @@ interface DocInterface {
 interface MinimalDocDatabaseInterface {
 	iterator(options?: { limit?: number }): AsyncIterableIterator<DocInterface>;
 	events: {
-		on(eventName: string, callback: (entry: StoreEventEntry) => void): void;
-		off(eventName: string, callback?: (entry: StoreEventEntry) => void): void;
+		on(eventName: string, callback: (entry: DocEntryInterface) => void): void;
+		off(eventName: string, callback?: (entry: DocEntryInterface) => void): void;
 	};
 	close(): Promise<void> | void;
 	get(key: string): Promise<DocInterface | null>;
 }
 
-interface StoreEventEntry {
+interface DocEntryInterface {
 	payload: {
-		value: string; // Expecting JSON string of ICoreEIPInfo
+		key: string;
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		value: any;
 	};
 }
 
@@ -162,12 +164,6 @@ const CommentItem: React.FC<ICommentProps> = ({ comment, allComments, onReply, i
 	);
 };
 
-const updateHandler = (entry: StoreEventEntry) => {
-	console.log("DB update event received:", entry);
-	// const newEip = JSON.parse(entry.payload.value) as IEIP;
-	// setEip(newEip);
-};
-
 const EIPPage: React.FC = () => {
 	const { eipId } = useParams<{ eipId: string }>();
 	const [eip, setEip] = useState<IEIP | null>(null);
@@ -186,6 +182,21 @@ const EIPPage: React.FC = () => {
 
 	const eipDBRef = useRef<MinimalDocDatabaseInterface | null>(null);
 	const commentDBRef = useRef<MinimalDocDatabaseInterface | null>(null);
+
+	const updateHandlerForEIPDB = (entry: DocEntryInterface) => {
+		console.log("DB update event received:", entry);
+		if (entry.payload.key !== "special-id-for-eip") {
+			return;
+		}
+		const newEip = entry.payload.value as IEIP;
+		setEip(newEip);
+	};
+
+	const updateHandlerForCommentDB = (entry: DocEntryInterface) => {
+		console.log("Comment DB update event received:", entry);
+		const newComment = JSON.parse(entry.payload.value) as IComment;
+		setComments((prevComments) => [...prevComments, newComment]);
+	};
 
 	useEffect(() => {
 		let isMounted = true;
@@ -276,7 +287,7 @@ const EIPPage: React.FC = () => {
 						return;
 					}
 
-					eipDBRef.current.events.on("update", updateHandler);
+					eipDBRef.current.events.on("update", updateHandlerForEIPDB);
 
 					const fetchedEipData = await eipDBRef.current.get("special-id-for-eip");
 					console.log("fetchedEipData", fetchedEipData);
@@ -337,7 +348,7 @@ const EIPPage: React.FC = () => {
 						return;
 					}
 
-					commentDBRef.current.events.on("update", updateHandler);
+					commentDBRef.current.events.on("update", updateHandlerForCommentDB);
 
 					const loadedComments: IComment[] = [];
 					for await (const record of commentDBRef.current.iterator({ limit: -1 })) {
@@ -372,7 +383,7 @@ const EIPPage: React.FC = () => {
 			isMounted = false;
 			if (eipDBRef.current) {
 				console.log("Cleaning up EIP database listener and closing connection for address:", dbAddress.current);
-				eipDBRef.current.events.off("update", updateHandler);
+				eipDBRef.current.events.off("update", updateHandlerForEIPDB);
 				eipDBRef.current.close();
 				eipDBRef.current = null;
 			}
@@ -381,7 +392,7 @@ const EIPPage: React.FC = () => {
 					"Cleaning up comment database listener and closing connection for address:",
 					commentDBAddress.current
 				);
-				commentDBRef.current.events.off("update", updateHandler);
+				commentDBRef.current.events.off("update", updateHandlerForCommentDB);
 				commentDBRef.current.close();
 				commentDBRef.current = null;
 			}
