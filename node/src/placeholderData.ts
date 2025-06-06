@@ -1,4 +1,4 @@
-import { type IEIP, type IComment, AllEIPStatusValues, AllEIPCategoryValues } from "@dsync/types";
+import { type IEIP, AllEIPStatusValues, AllEIPCategoryValues } from "@dsync/types";
 
 const randomTitles = [
 	"title 1",
@@ -27,16 +27,16 @@ const randomDescriptions = [
 ];
 
 const randomContents = [
-	"# content 1",
-	"# content 2",
-	"# content 3",
-	"# content 4",
-	"# content 5",
-	"# content 6",
-	"# content 7",
-	"# content 8",
-	"# content 9",
-	"# content 10",
+	"## content 1",
+	"## content 2",
+	"## content 3",
+	"## content 4",
+	"## content 5",
+	"## content 6",
+	"## content 7",
+	"## content 8",
+	"## content 9",
+	"## content 10",
 ];
 
 const randomAuthors = [
@@ -82,28 +82,6 @@ for (let i = 1; i < numEIPs; i++) {
 			return requires;
 		})(),
 		dbAddress: `orbitdb/${i}`,
-	});
-}
-
-const randomCommenters = ["UserA", "UserB", "UserC", "UserD", "UserE"];
-const randomCommentContents = [
-	"# This is a great proposal",
-	"# I agree with UserA",
-	"# I have some concerns about section 2",
-	"# Looking forward to the review",
-	"# I have some concerns about section 2",
-];
-
-const numComments = 100;
-export const placeholderComments: IComment[] = [];
-
-for (let i = 0; i < numComments; i++) {
-	placeholderComments.push({
-		id: `comment-${i}`,
-		eipId: Math.floor(Math.random() * numEIPs) + 1,
-		content: randomCommentContents[i % randomCommentContents.length],
-		createdBy: randomCommenters[i % randomCommenters.length],
-		createdAt: new Date(Date.now() - i * 1000),
-		parentId: i % 2 === 0 ? null : `comment-${Math.floor(Math.random() * (i - 1))}`,
+		commentDBAddress: `orbitdb/${i}-comments`,
 	});
 }

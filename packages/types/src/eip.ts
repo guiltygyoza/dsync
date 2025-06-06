@@ -38,6 +38,7 @@ export interface IEIP {
 	updatedAt: Date;
 	requires: number[];
 	dbAddress: string;
+	commentDBAddress: string;
 }
 
 export interface ICoreEIPInfo {

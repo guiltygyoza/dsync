@@ -13,7 +13,7 @@ importers:
         version: 9.27.0
       '@nomicfoundation/hardhat-toolbox':
         specifier: ^5.0.0
-        version: 5.0.0(4zxaahcw32wievn2ldpkm3ispa)
+        version: 5.0.0(d57a4bff2875b7296956defd5dce9218)
       '@types/react':
         specifier: ^19.1.4
         version: 19.1.4
@@ -8046,7 +8046,7 @@ snapshots:
       ethereumjs-util: 7.1.5
       hardhat: 2.24.1(bufferutil@4.0.9)(ts-node@10.9.2(@types/node@22.15.19)(typescript@5.8.3))(typescript@5.8.3)(utf-8-validate@5.0.10)
 
-  '@nomicfoundation/hardhat-toolbox@5.0.0(4zxaahcw32wievn2ldpkm3ispa)':
+  '@nomicfoundation/hardhat-toolbox@5.0.0(d57a4bff2875b7296956defd5dce9218)':
     dependencies:
       '@nomicfoundation/hardhat-chai-matchers': 2.0.8(@nomicfoundation/hardhat-ethers@3.0.8(ethers@6.14.1(bufferutil@4.0.9)(utf-8-validate@5.0.10))(hardhat@2.24.1(bufferutil@4.0.9)(ts-node@10.9.2(@types/node@22.15.19)(typescript@5.8.3))(typescript@5.8.3)(utf-8-validate@5.0.10)))(chai@4.5.0)(ethers@6.14.1(bufferutil@4.0.9)(utf-8-validate@5.0.10))(hardhat@2.24.1(bufferutil@4.0.9)(ts-node@10.9.2(@types/node@22.15.19)(typescript@5.8.3))(typescript@5.8.3)(utf-8-validate@5.0.10))
       '@nomicfoundation/hardhat-ethers': 3.0.8(ethers@6.14.1(bufferutil@4.0.9)(utf-8-validate@5.0.10))(hardhat@2.24.1(bufferutil@4.0.9)(ts-node@10.9.2(@types/node@22.15.19)(typescript@5.8.3))(typescript@5.8.3)(utf-8-validate@5.0.10))
