@@ -35,6 +35,27 @@ const EipDisplayTable: React.FC = () => {
 	const [expandedSections, setExpandedSections] = useState<Map<string, boolean>>(new Map());
 	const [selectedCategory, setSelectedCategory] = useState<EIP_CATEGORY | "All">("All");
 
+	const [isSmallScreen, setIsSmallScreen] = useState(window.innerWidth < 768);
+	const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+	useEffect(() => {
+		const handleResize = () => {
+			setIsSmallScreen(window.innerWidth < 768);
+		};
+		window.addEventListener("resize", handleResize);
+		return () => window.removeEventListener("resize", handleResize);
+	}, []);
+
+	useEffect(() => {
+		const hash = window.location.hash.replace("#", "").toLowerCase();
+		if (hash) {
+			const categoryFromHash = AllEIPCategoryValues.find((cat) => cat.toLowerCase() === hash);
+			if (categoryFromHash) {
+				setSelectedCategory(categoryFromHash);
+			}
+		}
+	}, []);
+
 	// Stable event handler for database updates
 	const updateHandler = useCallback((entry: StoreEventEntry) => {
 		console.log("DB update event received:", entry);
@@ -152,6 +173,18 @@ const EipDisplayTable: React.FC = () => {
 		navigate(`/eips/${eip._id}`, { state: { dbAddress: eip.dbAddress } });
 	};
 
+	const handleCategorySelect = (category: EIP_CATEGORY | "All") => {
+		setSelectedCategory(category);
+		if (isSmallScreen) {
+			setIsDropdownOpen(false); // Close dropdown on selection
+		}
+		// Scroll to the top of the EIP display section or a relevant section
+		const sectionElement = document.getElementById("eip-listing-section");
+		if (sectionElement) {
+			sectionElement.scrollIntoView({ behavior: "smooth" });
+		}
+	};
+
 	const toggleSection = (category: EIP_CATEGORY, status: EIP_STATUS) => {
 		const key = `${category}-${status}`;
 		const newExpandedSections = new Map(expandedSections);
@@ -168,24 +201,46 @@ const EipDisplayTable: React.FC = () => {
 	return (
 		<div>
 			<nav className="category-header-nav">
-				{navCategories.map((category) => (
-					<a
-						key={category}
-						// href={`#${category.toLowerCase()}`}
-						className={selectedCategory === category ? "active" : ""}
-						onClick={(e) => {
-							e.preventDefault(); // Prevent default anchor behavior
-							setSelectedCategory(category);
-							// Scroll to the top of the EIP display section or a relevant section
-							const sectionElement = document.getElementById("eip-listing-section");
-							if (sectionElement) {
-								sectionElement.scrollIntoView({ behavior: "smooth" });
-							}
-						}}
-					>
-						{category}
-					</a>
-				))}
+				{isSmallScreen ? (
+					<div className="dropdown">
+						<button onClick={() => setIsDropdownOpen(!isDropdownOpen)} className="dropdown-toggle">
+							{selectedCategory} <span className="arrow">{isDropdownOpen ? "▲" : "▼"}</span>
+						</button>
+						{isDropdownOpen && (
+							<div className="dropdown-menu">
+								{navCategories.map((category) => (
+									<a
+										key={category}
+										href={
+											category === "All" ? "#eip-listing-section" : `#${category.toLowerCase()}`
+										}
+										className={selectedCategory === category ? "active" : ""}
+										onClick={(e) => {
+											e.preventDefault();
+											handleCategorySelect(category);
+										}}
+									>
+										{category}
+									</a>
+								))}
+							</div>
+						)}
+					</div>
+				) : (
+					navCategories.map((category) => (
+						<a
+							key={category}
+							href={category === "All" ? "#eip-listing-section" : `#${category.toLowerCase()}`}
+							className={selectedCategory === category ? "active" : ""}
+							onClick={(e) => {
+								e.preventDefault(); // Prevent default anchor behavior
+								handleCategorySelect(category);
+							}}
+						>
+							{category}
+						</a>
+					))
+				)}
 			</nav>
 			{isLoadingEips && (
 				<div className="loading-indicator">
