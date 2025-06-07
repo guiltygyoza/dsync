@@ -408,6 +408,7 @@ const EIPPage: React.FC = () => {
 	const handleAddComment = async (e: React.FormEvent) => {
 		e.preventDefault();
 		// TODO: add user identity to the comment and insert to db
+		await commentDBRef.current?.close();
 		const writeOrbitdbInstance = await writeOrbitdb();
 		console.log("writeOrbitdbInstance", writeOrbitdbInstance);
 		if (!newCommentText.trim() || !eip || !writeOrbitdbInstance) return;

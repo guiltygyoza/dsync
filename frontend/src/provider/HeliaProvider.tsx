@@ -23,7 +23,7 @@ import { circuitRelayTransport } from "@libp2p/circuit-relay-v2";
 import * as filters from "@libp2p/websockets/filters";
 import { identify, identifyPush } from "@libp2p/identify";
 import { autoNAT } from "@libp2p/autonat";
-// import { kadDHT } from "@libp2p/kad-dht";
+import { kadDHT } from "@libp2p/kad-dht";
 import { devToolsMetrics } from "@libp2p/devtools-metrics";
 // import { peerIdFromString } from "@libp2p/peer-id";
 // import { tcp } from "@libp2p/tcp";
@@ -31,6 +31,7 @@ import { LevelBlockstore } from "blockstore-level";
 
 import { useAccount, useSignMessage } from "wagmi";
 import OrbitDBIdentityProviderEthereum from "../OrbitDBUtils/IdentityProviderEthereum";
+import ErrorToast from "../components/ErrorToast";
 
 export const bootstrapConfig = {
 	list: [
@@ -44,7 +45,7 @@ export const bootstrapConfig = {
 };
 
 // export const DBFINDER_ADDRESS = "/orbitdb/zdpuAwHvrRnh7PzhE89FUUM2eMrdpwGs8SRPS41JYiSLGoY8u";
-export const DBFINDER_ADDRESS = "/orbitdb/zdpuAto2aCYSg9fhVtJJaZZEBx2Xaio6RRfFNj2jNXhmxXaLE";
+export const DBFINDER_ADDRESS = "/orbitdb/zdpuAvoyLrNQXN5fcpHvmQuMbkJUHChkG8uGZVAzpYg1w415e";
 
 //// Based on the structure returned by OrbitDBIdentityProviderEthereum
 //type OrbitDBIdentityInstance = () => Promise<{
@@ -84,19 +85,13 @@ const setupLibp2p = async (): Promise<Libp2p<DefaultLibp2pServices>> => {
 		streamMuxers: [yamux()],
 		// @ts-expect-error -- .
 		services: {
-			//dht: kadDHT({
-			//  clientMode: true,
-			//  validators: {
-			//    ipns: ipnsValidator,
-			//  },
-			//  selectors: {
-			//    ipns: ipnsSelector,
-			//  },
-			//}),
+			dht: kadDHT({
+				clientMode: true,
+			}),
 			ping: ping(),
 			dcutr: dcutr(),
-			identify: identify(),
-			identifyPush: identifyPush(),
+			identify: identify({ maxMessageSize: Infinity }),
+			identifyPush: identifyPush({ maxMessageSize: Infinity }),
 			pubsub: gossipsub({
 				allowPublishToZeroTopicPeers: true,
 				fallbackToFloodsub: true,
@@ -122,6 +117,7 @@ export const HeliaProvider = ({ children }: { children: React.ReactNode }) => {
 	const [writeOrbitDB, setWriteOrbitDB] = useState<OrbitDB | null>(null);
 	const startingRef = useRef(false);
 	const [error, setError] = useState(false);
+	const [errors, setErrors] = useState<{ id: number; message: string }[]>([]);
 
 	const { address, isConnected } = useAccount();
 	const { signMessageAsync } = useSignMessage();
@@ -130,28 +126,35 @@ export const HeliaProvider = ({ children }: { children: React.ReactNode }) => {
 	useIdentityProvider(OrbitDBIdentityProviderEthereum);
 
 	const writeOrbitDBFn = useCallback(async () => {
-		if (writeOrbitDB) return writeOrbitDB;
-		if (!address) throw new Error("Address is not set");
-		if (!signMessageAsync) throw new Error("signMessageAsync is not set");
-		if (!helia) throw new Error("helia is not set");
-		if (!writeBlockstore) throw new Error("writeBlockstore is not set");
-		if (!isConnected) throw new Error("isConnected is not set");
+		try {
+			if (writeOrbitDB) return writeOrbitDB;
+			if (!address) throw new Error("Wallet not connected!");
+			if (!signMessageAsync) throw new Error("Wallet not connected!");
+			if (!helia) throw new Error("helia is not set");
+			if (!writeBlockstore) throw new Error("writeBlockstore is not set");
+			if (!isConnected) throw new Error("isConnected is not set");
 
-		const walletFacade = createWalletFacade(address, signMessageAsync);
-		// identityProviderInstance -> obj {getId, signIdentity, type}
-		const identityProviderInstance = OrbitDBIdentityProviderEthereum({ wallet: walletFacade });
-		console.log("identityProviderInstance", identityProviderInstance);
-		// Wrap the function in an arrow function to ensure React stores the function itself, not its return value.
-		const orbitdb = await createOrbitDB({
-			ipfs: helia,
-			identity: {
-				provider: identityProviderInstance,
-			},
-			blockstore: writeBlockstore,
-		});
+			const walletFacade = createWalletFacade(address, signMessageAsync);
+			// identityProviderInstance -> obj {getId, signIdentity, type}
+			const identityProviderInstance = OrbitDBIdentityProviderEthereum({ wallet: walletFacade });
+			console.log("identityProviderInstance", identityProviderInstance);
+			// Wrap the function in an arrow function to ensure React stores the function itself, not its return value.
+			const orbitdb = await createOrbitDB({
+				ipfs: helia,
+				identity: {
+					provider: identityProviderInstance,
+				},
+				blockstore: writeBlockstore,
+			});
 
-		setWriteOrbitDB(orbitdb);
-		return orbitdb;
+			setWriteOrbitDB(orbitdb);
+			return orbitdb;
+		} catch (e) {
+			setError(true);
+			const message = e instanceof Error ? e.message : "An unknown error occurred while writing to OrbitDB.";
+			setErrors((prev) => [...prev, { id: Date.now(), message }]);
+			throw e;
+		}
 	}, [helia, writeOrbitDB, signMessageAsync, isConnected, address, writeBlockstore, setWriteOrbitDB]);
 
 	const startHelia = useCallback(async () => {
@@ -182,6 +185,11 @@ export const HeliaProvider = ({ children }: { children: React.ReactNode }) => {
 		} catch (e) {
 			console.error(e);
 			setError(true);
+			const message =
+				e instanceof Error
+					? `Failed to start Helia: ${e.message}`
+					: "An unknown error occurred while starting Helia.";
+			setErrors((prev) => [...prev, { id: Date.now(), message }]);
 		}
 	}, [helia, readBlockstore]);
 
@@ -202,6 +210,23 @@ export const HeliaProvider = ({ children }: { children: React.ReactNode }) => {
 				starting: startingRef.current,
 			}}
 		>
+			<div
+				style={{
+					position: "fixed",
+					top: 0,
+					right: 0,
+					zIndex: 10000,
+					width: "300px",
+				}}
+			>
+				{errors.map((error) => (
+					<ErrorToast
+						key={error.id}
+						message={error.message}
+						onDismiss={() => setErrors((prev) => prev.filter((e) => e.id !== error.id))}
+					/>
+				))}
+			</div>
 			{children}
 		</HeliaContext.Provider>
 	);

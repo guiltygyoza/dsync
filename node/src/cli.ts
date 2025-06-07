@@ -11,7 +11,7 @@ import { yamux } from "@chainsafe/libp2p-yamux";
 import { LevelBlockstore } from "blockstore-level";
 import { autoTLS } from "@ipshipyard/libp2p-auto-tls";
 import { autoNAT } from "@libp2p/autonat";
-import { bootstrap } from "@libp2p/bootstrap";
+// import { bootstrap } from "@libp2p/bootstrap";
 import { circuitRelayTransport, circuitRelayServer } from "@libp2p/circuit-relay-v2";
 import { dcutr } from "@libp2p/dcutr";
 import { identify, identifyPush } from "@libp2p/identify";
@@ -31,12 +31,14 @@ import { keychain } from "@libp2p/keychain";
 import { generateKeyPairFromSeed } from "@libp2p/crypto/keys";
 import express from "express";
 import type { Request, Response, NextFunction } from "express";
+// import { MemoryDatastore } from "datastore-core";
+import { LevelDatastore } from "datastore-level";
 // import { Alchemy, Network } from "alchemy-sdk";
 // import crypto from "crypto";
 import { libp2pRouting } from "@helia/routers";
 import * as dotenv from "dotenv";
-import { placeholderEIPs } from "./placeholderData.js";
-import { addNewEIP } from "./orbitdb.js";
+// import { placeholderEIPs } from "./placeholderData.js";
+// import { addNewEIP } from "./orbitdb.js";
 import type { ICoreEIPInfo } from "@dsync/types";
 import { SPECIAL_ID_FOR_EIP, type IEIP } from "@dsync/types";
 
@@ -64,7 +66,7 @@ dotenv.config();
 async function startOrbitDB(addresses: string[] = []) {
 	let privKeyBuffer: Buffer | undefined;
 	if (process.env.PRIVATE_KEY_SEED) {
-		privKeyBuffer = Buffer.from(process.env.PRIVATE_KEY_SEED, "utf-8");
+		privKeyBuffer = Buffer.from("123", "utf-8");
 
 		if (privKeyBuffer.length < 32) {
 			const padding = Buffer.alloc(32 - privKeyBuffer.length);
@@ -79,13 +81,15 @@ async function startOrbitDB(addresses: string[] = []) {
 
 	const seed = new Uint8Array(privKeyBuffer || []);
 	const privateKey = await generateKeyPairFromSeed("Ed25519", seed);
+	const blockstore = new LevelBlockstore("./ipfs");
 
 	const libp2p = await createLibp2p({
+		datastore: new LevelDatastore("./datastore"),
 		privateKey,
 		addresses: {
 			listen: addresses,
 		},
-		peerDiscovery: [bootstrap(bootstrapConfig), mdns()],
+		peerDiscovery: [mdns()],
 		connectionEncrypters: [noise(), tls()],
 		connectionGater: {
 			denyDialMultiaddr: () => false,
@@ -98,8 +102,8 @@ async function startOrbitDB(addresses: string[] = []) {
 			}),
 			ping: ping(),
 			dcutr: dcutr(),
-			identify: identify(),
-			identifyPush: identifyPush(),
+			identify: identify({ maxMessageSize: Infinity }),
+			identifyPush: identifyPush({ maxMessageSize: Infinity }),
 			pubsub: gossipsub({
 				allowPublishToZeroTopicPeers: true,
 				fallbackToFloodsub: true,
@@ -117,8 +121,8 @@ async function startOrbitDB(addresses: string[] = []) {
 		...(privKeyBuffer && { identity: { privKey: privKeyBuffer } }),
 	});
 	// REALLLY IMPORTANT:
-	const blockstore = new LevelBlockstore("./ipfs");
 	const helia = await createHelia({ libp2p, blockstore, routers: [libp2pRouting(libp2p)] });
+	await helia.start();
 	const orbitdb = await createOrbitDB({ ipfs: helia, id: "bootstrap", blockstore });
 
 	return { orbitdb, libp2p };
@@ -156,7 +160,7 @@ program
 
 		const addresses = {
 			listen: [
-				//options.tcpPort ? `/ip4/0.0.0.0/tcp/${options.tcpPort}` : '/ip4/0.0.0.0/tcp/0',
+				"/ip4/0.0.0.0/tcp/9997",
 				options.wsPort ? `/ip4/0.0.0.0/tcp/${options.wsPort}/ws` : "/ip4/0.0.0.0/tcp/0/ws",
 				//options.webrtcPort ? `/ip4/0.0.0.0/udp/${options.webrtcPort}/webrtc-direct` : '/ip4/0.0.0.0/udp/0/webrtc-direct',
 				//'/ip6/::/tcp/0',
@@ -231,13 +235,30 @@ program
 			console.log("DBFinder close, peerId:", peerId);
 		});
 
-		for (const eip of placeholderEIPs) {
-			await addNewEIP(orbitdb, DBFinder, eip);
-			console.log("Inserted data into DBFinder", eip.id);
-		}
+		// for (const eip of placeholderEIPs) {
+		// 	await addNewEIP(orbitdb, DBFinder, eip);
+		// 	console.log("Inserted data into DBFinder", eip.id);
+		// }
+
+		// for await (const record of DBFinder.iterator({ limit: -1 })) {
+		// 	console.log("Record:", record.value);
+		// }
 
 		console.log("Completed inserting placeholder data");
 		console.log("DBFinder address", dbFinderAddress);
+		for await (const record of DBFinder.iterator({ limit: -1 })) {
+			const coreInfo = JSON.parse(record.value) as ICoreEIPInfo;
+			console.log("coreInfo", coreInfo);
+			const eipDoc = await orbitdb.open(coreInfo.dbAddress, { type: "documents" });
+			console.log("eipDoc.all", await eipDoc.all());
+			const eip = await eipDoc.get(SPECIAL_ID_FOR_EIP);
+			console.log("Full EIP:", eip);
+			const eipvalue = eip.value as IEIP;
+			console.log("eipvalue", eipvalue);
+			// const commentDoc = await orbitdb.open(eipvalue.commentDBAddress, { type: "documents" });
+			// const comments = await commentDoc.all();
+			// console.log("Comments:", comments);
+		}
 
 		console.log("OrbitDB identity id", orbitdb.identity.id);
 

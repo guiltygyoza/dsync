@@ -75,7 +75,7 @@ const EipDisplayTable: React.FC = () => {
 						setDbError(null);
 					}
 					console.log(`Opening the DBFinder at: ${DBFINDER_ADDRESS}`);
-					const newDbFinder = await orbitDB.open(DBFINDER_ADDRESS);
+					const newDbFinder = await orbitDB.open(DBFINDER_ADDRESS, { type: "keyvalue" });
 
 					if (!isMounted) {
 						// Component unmounted while opening
