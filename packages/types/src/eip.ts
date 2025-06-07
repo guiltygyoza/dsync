@@ -6,6 +6,7 @@ export enum EIP_STATUS {
 	DRAFT = "Draft",
 	STAGNANT = "Stagnant",
 	WITHDRAWN = "Withdrawn",
+	MOVED = "Moved",
 }
 
 export enum EIP_CATEGORY {
@@ -27,7 +28,7 @@ export const AllEIPCategoryValues = Object.values(EIP_CATEGORY);
 export const SPECIAL_ID_FOR_EIP = "special-id-for-eip";
 
 export interface IEIP {
-	id: number;
+	_id: number;
 	title: string;
 	description: string;
 	content: string; // Markdown
@@ -42,7 +43,7 @@ export interface IEIP {
 }
 
 export interface ICoreEIPInfo {
-	id: number;
+	_id: number;
 	title: string;
 	status: EIP_STATUS;
 	category: EIP_CATEGORY;

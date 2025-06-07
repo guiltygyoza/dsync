@@ -1,14 +1,5 @@
 import { useState, useMemo, useContext, useEffect, useRef, useCallback } from "react";
-import {
-	type IEIP,
-	type IComment,
-	EIP_CATEGORY,
-	EIP_STATUS,
-	AllEIPCategoryValues,
-	AllEIPStatusValues,
-	type ICoreEIPInfo,
-} from "@dsync/types";
-import EipDetailView from "./EipDetailView";
+import { EIP_CATEGORY, EIP_STATUS, AllEIPCategoryValues, AllEIPStatusValues, type ICoreEIPInfo } from "@dsync/types";
 import "../EipDisplayTable.css";
 import { useNavigate } from "react-router-dom";
 import { HeliaContext, DBFINDER_ADDRESS } from "../provider/HeliaProvider";
@@ -41,8 +32,6 @@ const EipDisplayTable: React.FC = () => {
 
 	const dbFinderRef = useRef<MinimalStoreInterface | null>(null);
 
-	const [selectedEip, setSelectedEip] = useState<IEIP | null>(null);
-	const [selectedComments, setSelectedComments] = useState<IComment[]>([]);
 	const [expandedSections, setExpandedSections] = useState<Map<string, boolean>>(new Map());
 	const [selectedCategory, setSelectedCategory] = useState<EIP_CATEGORY | "All">("All");
 
@@ -51,7 +40,7 @@ const EipDisplayTable: React.FC = () => {
 		console.log("DB update event received:", entry);
 		const newEip = JSON.parse(entry.payload.value) as ICoreEIPInfo;
 		setDbEips((prevEips) => {
-			if (!prevEips.find((existingEip) => existingEip.id === newEip.id)) {
+			if (!prevEips.find((existingEip) => existingEip._id === newEip._id)) {
 				return [...prevEips, newEip];
 			}
 			return prevEips;
@@ -150,7 +139,7 @@ const EipDisplayTable: React.FC = () => {
 
 		for (const statusMap of newGroupedEIPs.values()) {
 			for (const eipList of statusMap.values()) {
-				eipList.sort((a, b) => b.id - a.id);
+				eipList.sort((a, b) => b._id - a._id);
 			}
 		}
 		return {
@@ -160,12 +149,7 @@ const EipDisplayTable: React.FC = () => {
 
 	const handleEipClick = (eip: ICoreEIPInfo) => {
 		console.log("eip passed to handleEipClick", eip);
-		navigate(`/eips/${eip.id}`, { state: { dbAddress: eip.dbAddress } });
-	};
-
-	const handleCloseDetailView = () => {
-		setSelectedEip(null);
-		setSelectedComments([]);
+		navigate(`/eips/${eip._id}`, { state: { dbAddress: eip.dbAddress } });
 	};
 
 	const toggleSection = (category: EIP_CATEGORY, status: EIP_STATUS) => {
@@ -250,18 +234,17 @@ const EipDisplayTable: React.FC = () => {
 													<tbody>
 														{eipList.map((eip) => (
 															<tr
-																key={eip.id}
+																key={eip._id}
 																onClick={() => handleEipClick(eip)}
 																style={{ cursor: "pointer" }}
 															>
 																<td className="eip-number">
 																	<a
-																		href={`https://eips.ethereum.org/EIPS/eip-${eip.id}`}
 																		target="_blank"
 																		rel="noopener noreferrer"
-																		onClick={(e) => e.stopPropagation()}
+																		onClick={() => handleEipClick(eip)}
 																	>
-																		{eip.id}
+																		{eip._id}
 																	</a>
 																</td>
 																<td className="eip-title">{eip.title}</td>
@@ -278,9 +261,6 @@ const EipDisplayTable: React.FC = () => {
 						);
 					})}
 			</div>
-			{selectedEip && (
-				<EipDetailView eip={selectedEip} comments={selectedComments} onClose={handleCloseDetailView} />
-			)}
 		</div>
 	);
 };

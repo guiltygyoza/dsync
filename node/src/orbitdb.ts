@@ -5,7 +5,7 @@ import { IPFSAccessController } from "@orbitdb/core";
 
 const coreInfoFromEIP = (eip: IEIP): ICoreEIPInfo => {
 	return {
-		id: eip.id,
+		_id: eip._id,
 		title: eip.title,
 		status: eip.status,
 		category: eip.category,
@@ -32,21 +32,21 @@ const eipDocFromEIP = (eip: IEIP) => {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function addNewEIP(orbitdb: any, dbFinder: any, eip: IEIP) {
-	const eipDoc = await orbitdb.open(eip.dbAddress, {
+	const eipDoc = await orbitdb.open(`eip-${eip._id}-doc`, {
 		type: "documents",
 		AccessController: IPFSAccessController({ write: [...eip.authors, orbitdb.identity.id] }),
 	});
 	eip.dbAddress = eipDoc.address.toString();
 	const coreInfo: ICoreEIPInfo = {
-		id: eip.id,
+		_id: eip._id,
 		title: eip.title,
 		status: eip.status,
 		category: eip.category,
 		dbAddress: eip.dbAddress,
 	};
-	await dbFinder.put(eip.id.toString(), JSON.stringify(coreInfo));
+	await dbFinder.put(eip._id.toString(), JSON.stringify(coreInfo));
 
-	const commentDoc = await orbitdb.open(`comments-{${eip.id}}`, {
+	const commentDoc = await orbitdb.open(`comments-${eip._id}`, {
 		type: "documents",
 		AccessController: IPFSAccessController({ write: ["*"] }),
 	});
@@ -58,7 +58,7 @@ export async function addNewEIP(orbitdb: any, dbFinder: any, eip: IEIP) {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function changeEIPStatus(orbitdb: any, dbFinder: any, eip: IEIP, newStatus: EIP_STATUS) {
 	eip.status = newStatus;
-	await dbFinder.put(eip.id.toString(), JSON.stringify(coreInfoFromEIP(eip)));
+	await dbFinder.put(eip._id.toString(), JSON.stringify(coreInfoFromEIP(eip)));
 	const eipDoc = await orbitdb.open(eip.dbAddress, {
 		type: "documents",
 	});
@@ -68,7 +68,7 @@ export async function changeEIPStatus(orbitdb: any, dbFinder: any, eip: IEIP, ne
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function changeEIPAuthors(orbitdb: any, dbFinder: any, eip: IEIP, newAuthors: string[]) {
 	eip.authors = newAuthors;
-	await dbFinder.put(eip.id.toString(), JSON.stringify(coreInfoFromEIP(eip)));
+	await dbFinder.put(eip._id.toString(), JSON.stringify(coreInfoFromEIP(eip)));
 	const eipDoc = await orbitdb.open(eip.dbAddress, {
 		type: "documents",
 	});

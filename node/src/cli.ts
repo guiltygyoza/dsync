@@ -37,10 +37,12 @@ import { LevelDatastore } from "datastore-level";
 // import crypto from "crypto";
 import { libp2pRouting } from "@helia/routers";
 import * as dotenv from "dotenv";
-// import { placeholderEIPs } from "./placeholderData.js";
-// import { addNewEIP } from "./orbitdb.js";
-import type { ICoreEIPInfo } from "@dsync/types";
-import { SPECIAL_ID_FOR_EIP, type IEIP } from "@dsync/types";
+import type { EIP_CATEGORY, EIP_STATUS } from "@dsync/types";
+import { type IEIP } from "@dsync/types";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+import { addNewEIP } from "./orbitdb.js";
 
 interface RunOptions {
 	tcpPort?: number;
@@ -48,25 +50,35 @@ interface RunOptions {
 	webrtcPort?: number;
 }
 
-const bootstrapConfig = {
-	list: [
-		// "/ip4/157.90.152.156/tcp/36843/ws/p2p/12D3KooWB1J5ksLv96GTyH5Ugp1a8CDpLr5XGXpNHwWorTx95PDc",
-		// "/ip4/157.90.152.156/tcp/36437/p2p/12D3KooWB1J5ksLv96GTyH5Ugp1a8CDpLr5XGXpNHwWorTx95PDc",
-		"/ip4/86.252.78.192/tcp/9999/ws/p2p/12D3KooWJ3EqVf1X6QoBkeUSoRZyg8S11g8QVeyE8guVudedNZqv",
-		// "/ip4/86.252.78.192/tcp/54395/p2p/12D3KooWJ3EqVf1X6QoBkeUSoRZyg8S11g8QVeyE8guVudedNZqv",
-	],
-};
-
 const program = new Command();
 
 program.name("dsync-cli").description("CLI for interacting with Dsync").version("1.0.0");
 
 dotenv.config();
 
+const DBFINDER_NAME = "dbfinder";
+
+interface EIPData {
+	number: number;
+	attributes: {
+		eip: string;
+		title: string;
+		description: string;
+		author: string;
+		disscusionsTo: string;
+		status: string;
+		type: string;
+		category: string;
+		created: string;
+		requires: string;
+	};
+	markdown: string;
+}
+
 async function startOrbitDB(addresses: string[] = []) {
 	let privKeyBuffer: Buffer | undefined;
 	if (process.env.PRIVATE_KEY_SEED) {
-		privKeyBuffer = Buffer.from("123", "utf-8");
+		privKeyBuffer = Buffer.from(process.env.PRIVATE_KEY_SEED, "utf-8");
 
 		if (privKeyBuffer.length < 32) {
 			const padding = Buffer.alloc(32 - privKeyBuffer.length);
@@ -138,6 +150,60 @@ program
 	});
 
 program
+	.command("db-init")
+	.description(
+		"Initialize the database, make sure the eips.json file is in the same directory and the format is correct"
+	)
+	.action(async () => {
+		const codeDir = path.dirname(fileURLToPath(import.meta.url));
+		const eipsPath = path.join(codeDir, "eips.json");
+		if (!fs.existsSync(eipsPath)) {
+			console.error(`eips.json file does not exist in ${eipsPath}`);
+			process.exit(1);
+		}
+		const eipsData = JSON.parse(fs.readFileSync(eipsPath, "utf8")) as EIPData[];
+		console.log(`Loaded ${eipsData.length} EIPs from ${eipsPath}`);
+		const eips: IEIP[] = eipsData.map((data) => {
+			return {
+				_id: data.number,
+				title: data.attributes.title || "",
+				description: data.attributes.description || "",
+				content: data.markdown,
+				status: data.attributes.status as EIP_STATUS,
+				category: (data.attributes.category || "Informational") as EIP_CATEGORY,
+				authors: data.attributes.author ? data.attributes.author.split(",") : [],
+				createdAt: new Date(data.attributes.created || "01-01-2025"),
+				updatedAt: new Date(data.attributes.created || "01-01-2025"),
+				requires: data.attributes.requires ? data.attributes.requires.split(",").map((id) => parseInt(id)) : [],
+				dbAddress: "",
+				commentDBAddress: "",
+			};
+		});
+
+		console.log("Creating the DBFinder");
+		const { orbitdb, libp2p } = await startOrbitDB();
+		console.log("Libp2p peerId", libp2p.peerId);
+		console.log("OrbitDB identity id", orbitdb.identity.id);
+		const DBFinder = await orbitdb.open(DBFINDER_NAME, {
+			type: "keyvalue",
+			AccessController: IPFSAccessController({
+				write: [orbitdb.identity.id],
+			}),
+		});
+		const dbFinderAddress = DBFinder.address.toString();
+
+		for (const eip of eips) {
+			await addNewEIP(orbitdb, DBFinder, eip);
+			console.log("Inserted data into DBFinder for EIP", eip._id);
+		}
+
+		console.log("Completed inserting EIP data");
+		console.log("DBFinder created at", dbFinderAddress);
+
+		process.exit(0);
+	});
+
+program
 	.command("run")
 	.description("Start the node and keep it running")
 	.option("-t, --tcp-port <port>", "TCP port to listen on")
@@ -181,15 +247,15 @@ program
 		console.log(libp2p.getMultiaddrs());
 		console.log(libp2p.peerId);
 		libp2p.addEventListener("peer:connect", (peerId) => {
-			console.log("peer:connect", peerId.detail);
+			console.log("Libp2p peer:connect", peerId.detail);
 		});
 
 		libp2p.addEventListener("transport:listening", () => {
-			console.log("transport:listening", libp2p.getMultiaddrs());
+			console.log("Libp2p transport:listening", libp2p.getMultiaddrs());
 		});
 
 		libp2p.addEventListener("peer:disconnect", (peerId) => {
-			console.log("peer:disconnect", peerId.detail);
+			console.log("Libp2p peer:disconnect", peerId.detail);
 		});
 
 		// Creating the DBFinder, make sure the bt node's orbitdb id is in the access controller
@@ -244,21 +310,21 @@ program
 		// 	console.log("Record:", record.value);
 		// }
 
-		console.log("Completed inserting placeholder data");
-		console.log("DBFinder address", dbFinderAddress);
-		for await (const record of DBFinder.iterator({ limit: -1 })) {
-			const coreInfo = JSON.parse(record.value) as ICoreEIPInfo;
-			console.log("coreInfo", coreInfo);
-			const eipDoc = await orbitdb.open(coreInfo.dbAddress, { type: "documents" });
-			console.log("eipDoc.all", await eipDoc.all());
-			const eip = await eipDoc.get(SPECIAL_ID_FOR_EIP);
-			console.log("Full EIP:", eip);
-			const eipvalue = eip.value as IEIP;
-			console.log("eipvalue", eipvalue);
-			// const commentDoc = await orbitdb.open(eipvalue.commentDBAddress, { type: "documents" });
-			// const comments = await commentDoc.all();
-			// console.log("Comments:", comments);
-		}
+		console.log("DBFinder address: ", dbFinderAddress);
+		console.log("Records found in DBFinder: ", (await DBFinder.all()).length);
+		// for await (const record of DBFinder.iterator({ limit: -1 })) {
+		// 	const coreInfo = JSON.parse(record.value) as ICoreEIPInfo;
+		// 	console.log("coreInfo", coreInfo);
+		// 	const eipDoc = await orbitdb.open(coreInfo.dbAddress, { type: "documents" });
+		// 	console.log("eipDoc.all", await eipDoc.all());
+		// 	const eip = await eipDoc.get(SPECIAL_ID_FOR_EIP);
+		// 	console.log("Full EIP:", eip);
+		// 	const eipvalue = eip.value as IEIP;
+		// 	console.log("eipvalue", eipvalue);
+		// const commentDoc = await orbitdb.open(eipvalue.commentDBAddress, { type: "documents" });
+		// const comments = await commentDoc.all();
+		// console.log("Comments:", comments);
+		// }
 
 		console.log("OrbitDB identity id", orbitdb.identity.id);
 

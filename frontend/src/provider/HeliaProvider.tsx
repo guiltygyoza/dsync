@@ -39,13 +39,13 @@ export const bootstrapConfig = {
 		// "/ip4/157.90.152.156/tcp/36437/p2p/12D3KooWHYzgG1WpykEc2bqynAzCV5idt1UZmqQhxzuLcK2RvPWU",
 		// "/ip4/5.75.178.220/tcp/36437/p2p/12D3KooWBkPEDWKWCdZY28Kyy7TnegeRT61obxwdpFuQ7MfcVdRQ",
 		// "/ip4/5.75.178.220/tcp/36843/ws/p2p/12D3KooWBkPEDWKWCdZY28Kyy7TnegeRT61obxwdpFuQ7MfcVdRQ",
-		"/ip4/127.0.0.1/tcp/36437/p2p/12D3KooWGnbGVe3J6S4GCvvuxRgSTdsm6aFwvoD27UgP2xNns7rG",
-		"/ip4/127.0.0.1/tcp/9999/ws/p2p/12D3KooWGnbGVe3J6S4GCvvuxRgSTdsm6aFwvoD27UgP2xNns7rG",
+		"/ip4/127.0.0.1/tcp/9997/p2p/12D3KooW9ytqFZdCap4t331g5a9VtvhMhbYhoE5CFu8zcVc8Adg1",
+		"/ip4/127.0.0.1/tcp/9999/ws/p2p/12D3KooW9ytqFZdCap4t331g5a9VtvhMhbYhoE5CFu8zcVc8Adg1",
 	],
 };
 
 // export const DBFINDER_ADDRESS = "/orbitdb/zdpuAwHvrRnh7PzhE89FUUM2eMrdpwGs8SRPS41JYiSLGoY8u";
-export const DBFINDER_ADDRESS = "/orbitdb/zdpuAvoyLrNQXN5fcpHvmQuMbkJUHChkG8uGZVAzpYg1w415e";
+export const DBFINDER_ADDRESS = "/orbitdb/zdpuB3UkDspkByNMW7nCzmmYGMFgjM7UWLRosgGPJB6KdeTTV";
 
 //// Based on the structure returned by OrbitDBIdentityProviderEthereum
 //type OrbitDBIdentityInstance = () => Promise<{

@@ -77,7 +77,7 @@ const CommentItem: React.FC<ICommentProps> = ({ comment, allComments, onReply, i
 	const handleReplySubmit = (e: React.FormEvent) => {
 		e.preventDefault();
 		if (replyText.trim()) {
-			onReply(comment.id, replyText);
+			onReply(comment._id, replyText);
 			setReplyText("");
 			setShowReplyForm(false);
 		}
@@ -85,8 +85,8 @@ const CommentItem: React.FC<ICommentProps> = ({ comment, allComments, onReply, i
 
 	// Find replies for the current comment
 	const replies = useMemo(() => {
-		return allComments.filter((c) => c.parentId === comment.id && c.eipId === currentEIPId);
-	}, [allComments, comment.id, currentEIPId]);
+		return allComments.filter((c) => c.parentId === comment._id && c.eipId === currentEIPId);
+	}, [allComments, comment._id, currentEIPId]);
 
 	return (
 		<div style={{ border: "1px solid #eee", padding: "10px", marginBottom: "10px" }}>
@@ -150,7 +150,7 @@ const CommentItem: React.FC<ICommentProps> = ({ comment, allComments, onReply, i
 						// and set isEditable to false to prevent further nesting via UI.
 						// We also don't pass allComments down again for one-level replies.
 						<CommentItem
-							key={reply.id}
+							key={reply._id}
 							comment={reply}
 							allComments={[]}
 							onReply={() => {}}
@@ -296,6 +296,7 @@ const EIPPage: React.FC = () => {
 
 					if (isMounted) {
 						console.log("Fetched EIP from DB:", eipContent);
+						console.log("eipContent", eipContent);
 						setEip(eipContent);
 						await openAndLoadCommentDatabase();
 					}
@@ -407,7 +408,6 @@ const EIPPage: React.FC = () => {
 
 	const handleAddComment = async (e: React.FormEvent) => {
 		e.preventDefault();
-		// TODO: add user identity to the comment and insert to db
 		await commentDBRef.current?.close();
 		const writeOrbitdbInstance = await writeOrbitdb();
 		console.log("writeOrbitdbInstance", writeOrbitdbInstance);
@@ -416,16 +416,18 @@ const EIPPage: React.FC = () => {
 		const commentDoc = await writeOrbitdbInstance.open(eip.commentDBAddress);
 		console.log("commentDoc", commentDoc);
 
-		const newComment: IComment = {
-			id: `comment-${Date.now()}`,
-			eipId: eip.id,
+		const newComment = {
+			_id: `comment-${Date.now()}`,
+			eipId: eip._id,
 			createdBy: writeOrbitdbInstance.identity.id,
 			content: newCommentText,
 			createdAt: new Date(),
 			parentId: null,
 		};
-		await commentDoc.put(newComment.id, newComment);
-		setComments((prevComments) => [newComment, ...prevComments]);
+
+		console.log("newComment", newComment);
+		await commentDoc.put(newComment);
+		// setComments((prevComments) => [newComment, ...prevComments]);
 		setNewCommentText("");
 		if (eipId) {
 			localStorage.removeItem(`draft-comment-${eipId}`);
@@ -439,14 +441,14 @@ const EIPPage: React.FC = () => {
 		const commentDoc = await writeOrbitdbInstance.open(eip.commentDBAddress);
 		console.log("commentDoc", commentDoc);
 		const newReply: IComment = {
-			id: `reply-${parentId}-${Date.now()}`,
-			eipId: eip.id,
+			_id: `reply-${parentId}-${Date.now()}`,
+			eipId: eip._id,
 			createdBy: writeOrbitdbInstance.identity.id,
 			content: replyText,
 			createdAt: new Date(),
 			parentId: parentId,
 		};
-		await commentDoc.put(newReply.id, newReply);
+		await commentDoc.put(newReply._id, newReply);
 		setComments((prevComments) => [newReply, ...prevComments]);
 	};
 
@@ -552,12 +554,12 @@ const EIPPage: React.FC = () => {
 
 			{topLevelComments.map((comment) => (
 				<CommentItem
-					key={comment.id}
+					key={comment._id}
 					comment={comment}
 					allComments={comments}
 					onReply={handleReplyToComment}
 					isEditable={editable}
-					currentEIPId={eip.id}
+					currentEIPId={eip._id}
 				/>
 			))}
 		</div>
