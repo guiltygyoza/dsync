@@ -2,6 +2,7 @@ import React, { useContext, useState, useEffect, useMemo, useRef, type TextareaH
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import Markdown from "react-markdown";
 import rehypeExternalLinks from "rehype-external-links";
+import remarkGfm from "remark-gfm";
 import { type IEIP, type IComment, EIP_STATUS, SPECIAL_ID_FOR_EIP } from "@dsync/types";
 import { DBFINDER_ADDRESS, HeliaContext } from "../provider/HeliaProvider";
 
@@ -93,7 +94,10 @@ const CommentItem: React.FC<ICommentProps> = ({ comment, allComments, onReply, i
 			<p>
 				<strong>{comment.createdBy}</strong> ({new Date(comment.createdAt).toLocaleDateString()}):
 			</p>
-			<Markdown rehypePlugins={[[rehypeExternalLinks, { target: "_blank", rel: ["noopener", "noreferrer"] }]]}>
+			<Markdown
+				rehypePlugins={[[rehypeExternalLinks, { target: "_blank", rel: ["noopener", "noreferrer"] }]]}
+				remarkPlugins={[remarkGfm]}
+			>
 				{comment.content}
 			</Markdown>
 			{isEditable && (
@@ -133,6 +137,7 @@ const CommentItem: React.FC<ICommentProps> = ({ comment, allComments, onReply, i
 								rehypePlugins={[
 									[rehypeExternalLinks, { target: "_blank", rel: ["noopener", "noreferrer"] }],
 								]}
+								remarkPlugins={[remarkGfm]}
 							>
 								{replyText}
 							</Markdown>
@@ -500,7 +505,10 @@ const EIPPage: React.FC = () => {
 			<p>
 				<strong>Content:</strong>
 			</p>
-			<Markdown rehypePlugins={[[rehypeExternalLinks, { target: "_blank", rel: ["noopener", "noreferrer"] }]]}>
+			<Markdown
+				rehypePlugins={[[rehypeExternalLinks, { target: "_blank", rel: ["noopener", "noreferrer"] }]]}
+				remarkPlugins={[remarkGfm]}
+			>
 				{eip.content.replace(/^---[\s\S]*?---/, "").trim()}
 			</Markdown>
 
@@ -534,6 +542,7 @@ const EIPPage: React.FC = () => {
 									rehypePlugins={[
 										[rehypeExternalLinks, { target: "_blank", rel: ["noopener", "noreferrer"] }],
 									]}
+									remarkPlugins={[remarkGfm]}
 								>
 									{newCommentText}
 								</Markdown>
