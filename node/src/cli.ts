@@ -29,12 +29,7 @@ import { gossipsub } from "@chainsafe/libp2p-gossipsub";
 import * as filters from "@libp2p/websockets/filters";
 import { keychain } from "@libp2p/keychain";
 import { generateKeyPairFromSeed } from "@libp2p/crypto/keys";
-import express from "express";
-import type { Request, Response, NextFunction } from "express";
-// import { MemoryDatastore } from "datastore-core";
 import { LevelDatastore } from "datastore-level";
-// import { Alchemy, Network } from "alchemy-sdk";
-// import crypto from "crypto";
 import { libp2pRouting } from "@helia/routers";
 import * as dotenv from "dotenv";
 import type { EIP_CATEGORY, EIP_STATUS } from "@dsync/types";
@@ -171,8 +166,8 @@ program
 			ids.add(data.number);
 			const eip = {
 				_id: data.number,
-				title: data.attributes.title || "",
-				description: data.attributes.description || "",
+				title: data.attributes.title || "No title",
+				description: data.attributes.description || "No description",
 				content: data.markdown,
 				status: data.attributes.status as EIP_STATUS,
 				category: (data.attributes.category || "Informational") as EIP_CATEGORY,
@@ -218,20 +213,6 @@ program
 	.option("-w, --ws-port <port>", "WebSocket port to listen on")
 	.option("-r, --webrtc-port <port>", "WebRTC port to listen on")
 	.action(async (options: RunOptions) => {
-		const ALCHEMY_API_KEY = process.env.ALCHEMY_API_KEY || undefined;
-		const ALCHEMY_WEBHOOK_SIGNING_SECRET = process.env.ALCHEMY_WEBHOOK_SIGNING_SECRET || undefined;
-		const EIP_MANAGER_CONTRACT_ADDRESS = process.env.EIP_MANAGER_CONTRACT_ADDRESS || undefined;
-		const WEBHOOK_PORT = process.env.WEBHOOK_PORT || 3001;
-
-		if (!ALCHEMY_API_KEY || !EIP_MANAGER_CONTRACT_ADDRESS) {
-			console.warn(
-				"Please set your ALCHEMY_API_KEY and EIP_MANAGER_CONTRACT_ADDRESS environment variables or update them in cli.ts"
-			);
-		}
-		if (!ALCHEMY_WEBHOOK_SIGNING_SECRET) {
-			console.warn("Remember to set your ALCHEMY_WEBHOOK_SIGNING_SECRET for webhook verification.");
-		}
-
 		const addresses = {
 			listen: [
 				"/ip4/0.0.0.0/tcp/9997",
@@ -245,11 +226,6 @@ program
 				"/webrtc-direct",
 			],
 		};
-
-		// const alchemy = new Alchemy({
-		// 	apiKey: ALCHEMY_API_KEY,
-		// 	network: Network.ETH_SEPOLIA,
-		// });
 
 		const { orbitdb, libp2p } = await startOrbitDB(addresses.listen);
 		console.log(libp2p.getMultiaddrs());
@@ -335,36 +311,6 @@ program
 		// }
 
 		console.log("OrbitDB identity id", orbitdb.identity.id);
-
-		const app = express();
-
-		app.use((req: Request, res: Response, next: NextFunction) => {
-			if (req.originalUrl === "/alchemy-webhook") {
-				let data = "";
-				req.setEncoding("utf8");
-				req.on("data", (chunk) => {
-					data += chunk;
-				});
-				req.on("end", () => {
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					(req as any).rawBody = data;
-					next();
-				});
-			} else {
-				express.json()(req, res, next);
-			}
-		});
-
-		app.post("/alchemy-webhook", async (req: Request, res: Response) => {
-			// TODO
-			res.json(req.body);
-			res.status(200).send("Webhook received");
-		});
-
-		app.listen(WEBHOOK_PORT, () => {
-			console.log(`Webhook server listening on port ${WEBHOOK_PORT}`);
-		});
-
 		console.log("Node is running. Press Ctrl+C to stop.");
 
 		// Keep the process running
