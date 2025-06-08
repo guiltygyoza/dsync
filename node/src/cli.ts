@@ -202,8 +202,7 @@ program
 		// });
 
 		// TEST:
-		// const testKV = await orbitdb.open("/orbitdb/zdpuB3UdPyM3A4mW7mr54nwTZLyTderAQ37FJ9dNzE6UXUVfY", {
-			const testKV = await orbitdb.open("123", {
+		const testKV = await orbitdb.open("/orbitdb/zdpuB3UdPyM3A4mW7mr54nwTZLyTderAQ37FJ9dNzE6UXUVfY", {
 			type: "keyvalue",
 		});
 		console.log("testKV", testKV.address.toString());
