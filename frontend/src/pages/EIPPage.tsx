@@ -1,5 +1,5 @@
 import React, { useContext, useState, useEffect, useMemo, useRef, type TextareaHTMLAttributes, type FC } from "react";
-import { useParams, useLocation } from "react-router-dom";
+import { useParams, useLocation, useNavigate } from "react-router-dom";
 import Markdown from "react-markdown";
 import rehypeExternalLinks from "rehype-external-links";
 import { type IEIP, type IComment, EIP_STATUS, SPECIAL_ID_FOR_EIP } from "@dsync/types";
@@ -177,6 +177,7 @@ const EIPPage: React.FC = () => {
 
 	const { readOrbitDB: readOrbitdb, writeOrbitDB: writeOrbitdb } = useContext(HeliaContext);
 	const location = useLocation();
+	const navigate = useNavigate();
 	const dbAddress = useRef<string | null>(null);
 	const commentDBAddress = useRef<string | null>(null);
 
@@ -469,6 +470,9 @@ const EIPPage: React.FC = () => {
 
 	return (
 		<div>
+			<button onClick={() => navigate(-1)} style={{ marginBottom: "10px", padding: "5px 10px" }}>
+				&larr; Back
+			</button>
 			<h1>{eip.title}</h1>
 			<p>
 				<strong>EIP Status:</strong> {eip.status}
