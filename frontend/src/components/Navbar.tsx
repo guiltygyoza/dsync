@@ -50,10 +50,12 @@ const Navbar: React.FC<NavbarProps> = ({ theme, toggleTheme }) => {
 const styles: { [key: string]: React.CSSProperties } = {
 	navbarBase: {
 		padding: "10px 20px",
-		marginBottom: "20px",
 		display: "flex",
 		justifyContent: "space-between",
 		alignItems: "center",
+		position: "sticky",
+		top: 0,
+		zIndex: 1000,
 	},
 	brand: {
 		fontWeight: "bold",
