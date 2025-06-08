@@ -458,13 +458,25 @@ const EIPPage: React.FC = () => {
 	const topLevelComments = useMemo(() => comments.filter((c) => c.parentId === null), [comments]);
 
 	if (isLoadingEip) {
-		return <div>Loading EIP data... (eipId: {eipId})</div>;
+		return (
+			<div>
+				<button onClick={() => navigate(-1)} style={{ marginBottom: "10px", padding: "5px 10px" }}>
+					&larr; Back
+				</button>
+				<h3>Loading EIP data... (eipId: {eipId})</h3>
+			</div>
+		);
 	}
 
 	if (dbError) {
 		return (
 			<div>
-				Error loading EIP: {dbError} (eipId: {eipId})
+				<button onClick={() => navigate(-1)} style={{ marginBottom: "10px", padding: "5px 10px" }}>
+					&larr; Back
+				</button>
+				<h3>
+					Error loading EIP: {dbError} (eipId: {eipId})
+				</h3>
 			</div>
 		);
 	}

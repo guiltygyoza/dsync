@@ -3,6 +3,7 @@ import { EIP_CATEGORY, EIP_STATUS, AllEIPCategoryValues, AllEIPStatusValues, typ
 import "../EipDisplayTable.css";
 import { useNavigate, useLocation } from "react-router-dom";
 import { HeliaContext, DBFINDER_ADDRESS } from "../provider/HeliaProvider";
+import ScrollToTopButton from "./ScrollToTopButton";
 
 // Define interfaces based on usage to replace 'any' types for dbFinder and event entry
 interface MinimalStoreInterface {
@@ -204,6 +205,7 @@ const EipDisplayTable: React.FC = () => {
 
 	return (
 		<div>
+			<ScrollToTopButton />
 			<nav className="category-header-nav">
 				{isSmallScreen ? (
 					<div className="dropdown">
