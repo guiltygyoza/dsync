@@ -23,14 +23,14 @@ import { circuitRelayTransport } from "@libp2p/circuit-relay-v2";
 import * as filters from "@libp2p/websockets/filters";
 import { identify, identifyPush } from "@libp2p/identify";
 import { autoNAT } from "@libp2p/autonat";
-// import { kadDHT } from "@libp2p/kad-dht";
-import { devToolsMetrics } from "@libp2p/devtools-metrics";
-// import { peerIdFromString } from "@libp2p/peer-id";
+import { kadDHT } from "@libp2p/kad-dht";
+import { peerIdFromString } from "@libp2p/peer-id";
 // import { tcp } from "@libp2p/tcp";
 import { LevelBlockstore } from "blockstore-level";
 
 import { useAccount, useSignMessage } from "wagmi";
 import OrbitDBIdentityProviderEthereum from "../OrbitDBUtils/IdentityProviderEthereum";
+import ErrorToast from "../components/ErrorToast";
 
 export const bootstrapConfig = {
 	list: [
@@ -38,13 +38,13 @@ export const bootstrapConfig = {
 		// "/ip4/157.90.152.156/tcp/36437/p2p/12D3KooWHYzgG1WpykEc2bqynAzCV5idt1UZmqQhxzuLcK2RvPWU",
 		// "/ip4/5.75.178.220/tcp/36437/p2p/12D3KooWBkPEDWKWCdZY28Kyy7TnegeRT61obxwdpFuQ7MfcVdRQ",
 		// "/ip4/5.75.178.220/tcp/36843/ws/p2p/12D3KooWBkPEDWKWCdZY28Kyy7TnegeRT61obxwdpFuQ7MfcVdRQ",
-		"/ip4/127.0.0.1/tcp/36437/p2p/12D3KooWGnbGVe3J6S4GCvvuxRgSTdsm6aFwvoD27UgP2xNns7rG",
-		"/ip4/127.0.0.1/tcp/9999/ws/p2p/12D3KooWGnbGVe3J6S4GCvvuxRgSTdsm6aFwvoD27UgP2xNns7rG",
+		"/ip4/127.0.0.1/tcp/9997/p2p/12D3KooW9ytqFZdCap4t331g5a9VtvhMhbYhoE5CFu8zcVc8Adg1",
+		"/ip4/127.0.0.1/tcp/9999/ws/p2p/12D3KooW9ytqFZdCap4t331g5a9VtvhMhbYhoE5CFu8zcVc8Adg1",
 	],
 };
 
 // export const DBFINDER_ADDRESS = "/orbitdb/zdpuAwHvrRnh7PzhE89FUUM2eMrdpwGs8SRPS41JYiSLGoY8u";
-export const DBFINDER_ADDRESS = "/orbitdb/zdpuAto2aCYSg9fhVtJJaZZEBx2Xaio6RRfFNj2jNXhmxXaLE";
+export const DBFINDER_ADDRESS = "/orbitdb/zdpuAzSJGmvgrBdzvNeMPdjfA756R54QgebHMF5o8p6V1ckSk";
 
 //// Based on the structure returned by OrbitDBIdentityProviderEthereum
 //type OrbitDBIdentityInstance = () => Promise<{
@@ -75,28 +75,22 @@ const createWalletFacade = (address: string, signMessageAsync: (args: { message:
 });
 
 const setupLibp2p = async (): Promise<Libp2p<DefaultLibp2pServices>> => {
+	// @ts-expect-error -- .
 	return await createLibp2p<DefaultLibp2pServices>({
 		addresses: { listen: ["/p2p-circuit", "/webrtc", "/webrtc-direct"] },
 		peerDiscovery: [bootstrap(bootstrapConfig)],
 		connectionEncrypters: [noise()],
 		connectionGater: { denyDialMultiaddr: () => false },
-		metrics: devToolsMetrics(),
 		streamMuxers: [yamux()],
 		// @ts-expect-error -- .
 		services: {
-			//dht: kadDHT({
-			//  clientMode: true,
-			//  validators: {
-			//    ipns: ipnsValidator,
-			//  },
-			//  selectors: {
-			//    ipns: ipnsSelector,
-			//  },
-			//}),
+			dht: kadDHT({
+				// clientMode: true,
+			}),
 			ping: ping(),
 			dcutr: dcutr(),
-			identify: identify(),
-			identifyPush: identifyPush(),
+			identify: identify({ maxMessageSize: 2_000_000_000 }),
+			identifyPush: identifyPush({ maxMessageSize: 2_000_000_000 }),
 			pubsub: gossipsub({
 				allowPublishToZeroTopicPeers: true,
 				fallbackToFloodsub: true,
@@ -122,6 +116,7 @@ export const HeliaProvider = ({ children }: { children: React.ReactNode }) => {
 	const [writeOrbitDB, setWriteOrbitDB] = useState<OrbitDB | null>(null);
 	const startingRef = useRef(false);
 	const [error, setError] = useState(false);
+	const [errors, setErrors] = useState<{ id: number; message: string }[]>([]);
 
 	const { address, isConnected } = useAccount();
 	const { signMessageAsync } = useSignMessage();
@@ -130,28 +125,35 @@ export const HeliaProvider = ({ children }: { children: React.ReactNode }) => {
 	useIdentityProvider(OrbitDBIdentityProviderEthereum);
 
 	const writeOrbitDBFn = useCallback(async () => {
-		if (writeOrbitDB) return writeOrbitDB;
-		if (!address) throw new Error("Address is not set");
-		if (!signMessageAsync) throw new Error("signMessageAsync is not set");
-		if (!helia) throw new Error("helia is not set");
-		if (!writeBlockstore) throw new Error("writeBlockstore is not set");
-		if (!isConnected) throw new Error("isConnected is not set");
+		try {
+			if (writeOrbitDB) return writeOrbitDB;
+			if (!address) throw new Error("Wallet not connected!");
+			if (!signMessageAsync) throw new Error("Wallet not connected!");
+			if (!helia) throw new Error("helia is not set");
+			if (!writeBlockstore) throw new Error("writeBlockstore is not set");
+			if (!isConnected) throw new Error("isConnected is not set");
 
-		const walletFacade = createWalletFacade(address, signMessageAsync);
-		// identityProviderInstance -> obj {getId, signIdentity, type}
-		const identityProviderInstance = OrbitDBIdentityProviderEthereum({ wallet: walletFacade });
-		console.log("identityProviderInstance", identityProviderInstance);
-		// Wrap the function in an arrow function to ensure React stores the function itself, not its return value.
-		const orbitdb = await createOrbitDB({
-			ipfs: helia,
-			identity: {
-				provider: identityProviderInstance,
-			},
-			blockstore: writeBlockstore,
-		});
+			const walletFacade = createWalletFacade(address, signMessageAsync);
+			// identityProviderInstance -> obj {getId, signIdentity, type}
+			const identityProviderInstance = OrbitDBIdentityProviderEthereum({ wallet: walletFacade });
+			console.log("identityProviderInstance", identityProviderInstance);
+			// Wrap the function in an arrow function to ensure React stores the function itself, not its return value.
+			const orbitdb = await createOrbitDB({
+				ipfs: helia,
+				identity: {
+					provider: identityProviderInstance,
+				},
+				blockstore: writeBlockstore,
+			});
 
-		setWriteOrbitDB(orbitdb);
-		return orbitdb;
+			setWriteOrbitDB(orbitdb);
+			return orbitdb;
+		} catch (e) {
+			setError(true);
+			const message = e instanceof Error ? e.message : "An unknown error occurred while writing to OrbitDB.";
+			setErrors((prev) => [...prev, { id: Date.now(), message }]);
+			throw e;
+		}
 	}, [helia, writeOrbitDB, signMessageAsync, isConnected, address, writeBlockstore, setWriteOrbitDB]);
 
 	const startHelia = useCallback(async () => {
@@ -170,6 +172,14 @@ export const HeliaProvider = ({ children }: { children: React.ReactNode }) => {
 		try {
 			const libp2p = await setupLibp2p();
 			const helia = await createHelia({ libp2p, blockstore: readBlockstore, routers: [libp2pRouting(libp2p)] });
+			await new Promise((resolve) => setTimeout(resolve, 2000));
+			const peerId = peerIdFromString("12D3KooW9ytqFZdCap4t331g5a9VtvhMhbYhoE5CFu8zcVc8Adg1");
+			const peer = await libp2p.peerStore.get(peerId);
+			console.log("peer", peer);
+			console.log("protocols", peer.protocols);
+			console.log("tags", peer.tags);
+			console.log("protocols", libp2p.getProtocols());
+			console.log("multiaddrs", libp2p.getMultiaddrs());
 			const readOrbitdb = await createOrbitDB({
 				ipfs: helia,
 				blockstore: readBlockstore,
@@ -182,6 +192,11 @@ export const HeliaProvider = ({ children }: { children: React.ReactNode }) => {
 		} catch (e) {
 			console.error(e);
 			setError(true);
+			const message =
+				e instanceof Error
+					? `Failed to start Helia: ${e.message}`
+					: "An unknown error occurred while starting Helia.";
+			setErrors((prev) => [...prev, { id: Date.now(), message }]);
 		}
 	}, [helia, readBlockstore]);
 
@@ -202,6 +217,23 @@ export const HeliaProvider = ({ children }: { children: React.ReactNode }) => {
 				starting: startingRef.current,
 			}}
 		>
+			<div
+				style={{
+					position: "fixed",
+					top: 0,
+					right: 0,
+					zIndex: 10000,
+					width: "300px",
+				}}
+			>
+				{errors.map((error) => (
+					<ErrorToast
+						key={error.id}
+						message={error.message}
+						onDismiss={() => setErrors((prev) => prev.filter((e) => e.id !== error.id))}
+					/>
+				))}
+			</div>
 			{children}
 		</HeliaContext.Provider>
 	);

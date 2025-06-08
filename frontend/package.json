@@ -52,6 +52,7 @@
 		"react-markdown": "^10.1.0",
 		"react-router-dom": "^7.6.0",
 		"rehype-external-links": "^3.0.0",
+		"remark-gfm": "^4.0.1",
 		"viem": "^2.29.2",
 		"wagmi": "^2.15.2"
 	},

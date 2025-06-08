@@ -32,7 +32,7 @@ function App() {
 	return (
 		<Router>
 			<Navbar theme={theme} toggleTheme={toggleTheme} />
-			<main style={{ padding: "0 20px" }} className={theme}>
+			<main style={{ padding: "10px 20px 0 20px" }} className={theme}>
 				<Routes>
 					<Route path="/" element={<HomePage />} />
 					<Route path="/eips/:eipId" element={<EIPPage />} />

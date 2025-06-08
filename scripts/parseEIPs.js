@@ -15,7 +15,8 @@ const statusMapping = {
   'Final': 3,
   'Stagnant': 4,
   'Withdrawn': 5,
-  'Living': 6
+  'Living': 6,
+  'Moved': 7,
 };
 
 // Function to convert author strings to Ethereum addresses
@@ -58,7 +59,7 @@ function writeArrayToFile(filePath, arrayData) {
 async function parseEIPs() {
   try {
     // Read the eips.json file
-    const eipsPath = path.join(__dirname, '..', 'contract', 'eips.json');
+    const eipsPath = path.join(__dirname, '..', 'data', 'eips.json');
     const eipsData = fs.readFileSync(eipsPath, 'utf8');
     const eips = JSON.parse(eipsData);
     

@@ -1,21 +1,13 @@
 import { useState, useMemo, useContext, useEffect, useRef, useCallback } from "react";
-import {
-	type IEIP,
-	type IComment,
-	EIP_CATEGORY,
-	EIP_STATUS,
-	AllEIPCategoryValues,
-	AllEIPStatusValues,
-	type ICoreEIPInfo,
-} from "@dsync/types";
-import EipDetailView from "./EipDetailView";
+import { EIP_CATEGORY, EIP_STATUS, AllEIPCategoryValues, AllEIPStatusValues, type ICoreEIPInfo } from "@dsync/types";
 import "../EipDisplayTable.css";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { HeliaContext, DBFINDER_ADDRESS } from "../provider/HeliaProvider";
+import ScrollToTopButton from "./ScrollToTopButton";
 
 // Define interfaces based on usage to replace 'any' types for dbFinder and event entry
 interface MinimalStoreInterface {
-	iterator(options?: { limit?: number }): AsyncIterableIterator<{ value: string }>;
+	iterator(options?: { amount?: number }): AsyncIterableIterator<{ value: string }>;
 	events: {
 		on(eventName: string, callback: (entry: StoreEventEntry) => void): void;
 		off(eventName: string, callback?: (entry: StoreEventEntry) => void): void;
@@ -33,6 +25,7 @@ type GroupedEIPs = Map<EIP_CATEGORY, Map<EIP_STATUS, ICoreEIPInfo[]>>;
 
 const EipDisplayTable: React.FC = () => {
 	const navigate = useNavigate();
+	const location = useLocation();
 	const { readOrbitDB: orbitDB } = useContext(HeliaContext);
 
 	const [dbEips, setDbEips] = useState<ICoreEIPInfo[]>([]);
@@ -41,17 +34,51 @@ const EipDisplayTable: React.FC = () => {
 
 	const dbFinderRef = useRef<MinimalStoreInterface | null>(null);
 
-	const [selectedEip, setSelectedEip] = useState<IEIP | null>(null);
-	const [selectedComments, setSelectedComments] = useState<IComment[]>([]);
 	const [expandedSections, setExpandedSections] = useState<Map<string, boolean>>(new Map());
 	const [selectedCategory, setSelectedCategory] = useState<EIP_CATEGORY | "All">("All");
+
+	const [isSmallScreen, setIsSmallScreen] = useState(window.innerWidth < 768);
+	const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+	useEffect(() => {
+		const handleResize = () => {
+			setIsSmallScreen(window.innerWidth < 768);
+		};
+		window.addEventListener("resize", handleResize);
+		return () => window.removeEventListener("resize", handleResize);
+	}, []);
+
+	useEffect(() => {
+		const hash = location.hash.replace("#", "").toLowerCase();
+
+		const categoryFromHash = AllEIPCategoryValues.find((cat) => cat.toLowerCase() === hash);
+		if (categoryFromHash) {
+			setSelectedCategory(categoryFromHash);
+		} else {
+			setSelectedCategory("All"); // Default to 'All' for any other hash or no hash
+		}
+
+		if (isSmallScreen) {
+			setIsDropdownOpen(false); // Close dropdown on selection
+		}
+
+		// After state update, scroll to the relevant section.
+		// Use a short timeout to allow the DOM to update.
+		setTimeout(() => {
+			const elementId = hash && hash.length > 0 ? hash : "all";
+			const element = document.getElementById(elementId);
+			if (element && elementId !== "all") {
+				element.scrollIntoView({ behavior: "smooth", block: "start" });
+			}
+		}, 100);
+	}, [location, isSmallScreen]);
 
 	// Stable event handler for database updates
 	const updateHandler = useCallback((entry: StoreEventEntry) => {
 		console.log("DB update event received:", entry);
 		const newEip = JSON.parse(entry.payload.value) as ICoreEIPInfo;
 		setDbEips((prevEips) => {
-			if (!prevEips.find((existingEip) => existingEip.id === newEip.id)) {
+			if (!prevEips.find((existingEip) => existingEip._id === newEip._id)) {
 				return [...prevEips, newEip];
 			}
 			return prevEips;
@@ -75,7 +102,7 @@ const EipDisplayTable: React.FC = () => {
 						setDbError(null);
 					}
 					console.log(`Opening the DBFinder at: ${DBFINDER_ADDRESS}`);
-					const newDbFinder = await orbitDB.open(DBFINDER_ADDRESS);
+					const newDbFinder = await orbitDB.open(DBFINDER_ADDRESS, { type: "keyvalue" });
 
 					if (!isMounted) {
 						// Component unmounted while opening
@@ -100,7 +127,7 @@ const EipDisplayTable: React.FC = () => {
 					// Load initial EIPs
 					console.log("Fetching EIPs from DB...");
 					const initialEips: ICoreEIPInfo[] = [];
-					for await (const record of dbFinderRef.current.iterator({ limit: -1 })) {
+					for await (const record of dbFinderRef.current.iterator()) {
 						const eip = JSON.parse(record.value) as ICoreEIPInfo;
 						initialEips.push(eip);
 					}
@@ -150,7 +177,7 @@ const EipDisplayTable: React.FC = () => {
 
 		for (const statusMap of newGroupedEIPs.values()) {
 			for (const eipList of statusMap.values()) {
-				eipList.sort((a, b) => b.id - a.id);
+				eipList.sort((a, b) => b._id - a._id);
 			}
 		}
 		return {
@@ -160,12 +187,7 @@ const EipDisplayTable: React.FC = () => {
 
 	const handleEipClick = (eip: ICoreEIPInfo) => {
 		console.log("eip passed to handleEipClick", eip);
-		navigate(`/eips/${eip.id}`, { state: { dbAddress: eip.dbAddress } });
-	};
-
-	const handleCloseDetailView = () => {
-		setSelectedEip(null);
-		setSelectedComments([]);
+		navigate(`/eips/${eip._id}`, { state: { dbAddress: eip.dbAddress } });
 	};
 
 	const toggleSection = (category: EIP_CATEGORY, status: EIP_STATUS) => {
@@ -183,25 +205,38 @@ const EipDisplayTable: React.FC = () => {
 
 	return (
 		<div>
+			<ScrollToTopButton />
 			<nav className="category-header-nav">
-				{navCategories.map((category) => (
-					<a
-						key={category}
-						// href={`#${category.toLowerCase()}`}
-						className={selectedCategory === category ? "active" : ""}
-						onClick={(e) => {
-							e.preventDefault(); // Prevent default anchor behavior
-							setSelectedCategory(category);
-							// Scroll to the top of the EIP display section or a relevant section
-							const sectionElement = document.getElementById("eip-listing-section");
-							if (sectionElement) {
-								sectionElement.scrollIntoView({ behavior: "smooth" });
-							}
-						}}
-					>
-						{category}
-					</a>
-				))}
+				{isSmallScreen ? (
+					<div className="dropdown">
+						<button onClick={() => setIsDropdownOpen(!isDropdownOpen)} className="dropdown-toggle">
+							{selectedCategory} <span className="arrow">{isDropdownOpen ? "▲" : "▼"}</span>
+						</button>
+						{isDropdownOpen && (
+							<div className="dropdown-menu">
+								{navCategories.map((category) => (
+									<a
+										key={category}
+										href={category === "All" ? "#all" : `#${category.toLowerCase()}`}
+										className={selectedCategory === category ? "active" : ""}
+									>
+										{category}
+									</a>
+								))}
+							</div>
+						)}
+					</div>
+				) : (
+					navCategories.map((category) => (
+						<a
+							key={category}
+							href={category === "All" ? "#all" : `#${category.toLowerCase()}`}
+							className={selectedCategory === category ? "active" : ""}
+						>
+							{category}
+						</a>
+					))
+				)}
 			</nav>
 			{isLoadingEips && (
 				<div className="loading-indicator">
@@ -250,18 +285,17 @@ const EipDisplayTable: React.FC = () => {
 													<tbody>
 														{eipList.map((eip) => (
 															<tr
-																key={eip.id}
+																key={eip._id}
 																onClick={() => handleEipClick(eip)}
 																style={{ cursor: "pointer" }}
 															>
 																<td className="eip-number">
 																	<a
-																		href={`https://eips.ethereum.org/EIPS/eip-${eip.id}`}
 																		target="_blank"
 																		rel="noopener noreferrer"
-																		onClick={(e) => e.stopPropagation()}
+																		onClick={() => handleEipClick(eip)}
 																	>
-																		{eip.id}
+																		{eip._id}
 																	</a>
 																</td>
 																<td className="eip-title">{eip.title}</td>
@@ -278,9 +312,6 @@ const EipDisplayTable: React.FC = () => {
 						);
 					})}
 			</div>
-			{selectedEip && (
-				<EipDetailView eip={selectedEip} comments={selectedComments} onClose={handleCloseDetailView} />
-			)}
 		</div>
 	);
 };

@@ -22,8 +22,8 @@
 
 .category-header-nav a:hover,
 .category-header-nav a.active {
-	background-color: #555555; /* Darker background for active/hover on light theme */
-	color: #ffffff;
+	background-color: #ddd;
+	color: black;
 }
 
 .category-section {
@@ -210,4 +210,62 @@
 	100% {
 	  transform: rotate(360deg);
 	}
+}
+
+/* Dropdown styles */
+.dropdown {
+	position: relative;
+	display: inline-block;
+	width: 100%;
+}
+
+.dropdown-toggle {
+	background-color: #333;
+	color: white;
+	padding: 14px 20px;
+	font-size: 16px;
+	border: none;
+	cursor: pointer;
+	width: 100%;
+	text-align: left;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.dark-mode .dropdown-toggle:hover {
+	background-color: #444;
+}
+
+.light-mode .dropdown-toggle:hover {
+	background-color: #ddd;
+}
+
+.dropdown-menu {
+	display: block;
+	position: absolute;
+	background-color: #f9f9f9;
+	min-width: 100%;
+	box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+	z-index: 1;
+}
+
+.dropdown-menu a {
+	color: black;
+	padding: 12px 16px;
+	text-decoration: none;
+	display: block;
+}
+
+.dropdown-menu a:hover {
+	background-color: #f1f1f1;
+}
+
+.dropdown-menu a.active {
+	background-color: #ddd;
+	color: black;
+}
+
+.arrow {
+	font-size: 12px;
 }

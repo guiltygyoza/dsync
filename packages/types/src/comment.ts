@@ -1,5 +1,5 @@
 export interface IComment {
-	id: string;
+	_id: string;
 	eipId: number;
 	content: string;
 	createdBy: string;

@@ -171,3 +171,46 @@ body.dark-mode {
 code {
 	font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
 }
+
+/* Add this to your CSS file */
+table {
+	width: 100%;
+	border-collapse: collapse;
+	margin: 1em 0;
+}
+
+.light-mode th,
+.light-mode td {
+	border: 1px solid #ddd;
+	padding: 8px;
+	text-align: left;
+}
+.dark-mode th,
+.dark-mode td {
+	border: 1px solid #555;
+	padding: 8px;
+	text-align: left;
+}
+th,
+td {
+	border: 1px solid #ddd;
+	padding: 8px;
+	text-align: left;
+}
+
+.light-mode th {
+	background-color: #f2f2f2;
+	font-weight: bold;
+}
+
+.light-mode tr:nth-child(even) {
+	background-color: #f9f9f9;
+}
+
+.dark-mode tr:nth-child(even) {
+	background-color: #333;
+}
+
+tr:nth-child(even) {
+	background-color: #f9f9f9;
+}

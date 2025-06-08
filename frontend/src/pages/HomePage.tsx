@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import "../styles/HomePage.css";
 
@@ -79,13 +79,30 @@ const stats = {
 };
 
 const HomePage: React.FC = () => {
-	// Calculate time until next call
-	const nextCallDate = new Date("June 15, 2025 14:00:00 UTC");
-	const currentDate = new Date();
-	const timeUntilNextCall = nextCallDate.getTime() - currentDate.getTime();
+	const calculateTimeLeft = () => {
+		const nextCallDate = new Date(`${upcomingCalls[0].date} ${upcomingCalls[0].time}`);
+		const difference = nextCallDate.getTime() - new Date().getTime();
 
-	const days = Math.floor(timeUntilNextCall / (1000 * 60 * 60 * 24));
-	const hours = Math.floor((timeUntilNextCall % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+		if (difference > 0) {
+			return {
+				days: Math.floor(difference / (1000 * 60 * 60 * 24)),
+				hours: Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+				minutes: Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60)),
+				seconds: Math.floor((difference % (1000 * 60)) / 1000),
+			};
+		}
+		return null;
+	};
+
+	const [timeLeft, setTimeLeft] = useState(calculateTimeLeft());
+
+	useEffect(() => {
+		const timer = setInterval(() => {
+			setTimeLeft(calculateTimeLeft());
+		}, 1000);
+
+		return () => clearInterval(timer);
+	}, []);
 
 	return (
 		<div className="home-container">
@@ -115,15 +132,43 @@ const HomePage: React.FC = () => {
 					{/* <h3>Upcoming Meetings</h3> */}
 					<div className="countdown-floor-container">
 						<div className="next-call-countdown">
-							<div className="countdown-box">
-								<span className="countdown-number">{days}</span>
-								<span className="countdown-label">days</span>
-							</div>
-							<div className="countdown-box">
-								<span className="countdown-number">{hours}</span>
-								<span className="countdown-label">hours</span>
-							</div>
-							<span className="countdown-text">until next meeting</span>
+							{timeLeft ? (
+								<>
+									<div className="countdown-boxes-container">
+										<div className="countdown-box">
+											<span className="countdown-number">{timeLeft.days}</span>
+											<span className="countdown-label">days</span>
+										</div>
+										<div className="countdown-box">
+											<span className="countdown-number">{timeLeft.hours}</span>
+											{timeLeft.hours === 1 ? (
+												<span className="countdown-label">hour</span>
+											) : (
+												<span className="countdown-label">hours</span>
+											)}
+										</div>
+										<div className="countdown-box">
+											<span className="countdown-number">{timeLeft.minutes}</span>
+											{timeLeft.minutes === 1 ? (
+												<span className="countdown-label">minute</span>
+											) : (
+												<span className="countdown-label">minutes</span>
+											)}
+										</div>
+										<div className="countdown-box">
+											<span className="countdown-number">{timeLeft.seconds}</span>
+											{timeLeft.seconds === 1 ? (
+												<span className="countdown-label">second</span>
+											) : (
+												<span className="countdown-label">seconds</span>
+											)}
+										</div>
+									</div>
+									<span className="countdown-text">until next meeting</span>
+								</>
+							) : (
+								<span className="countdown-text">Meeting is live!</span>
+							)}
 						</div>
 
 						<div className="vertical-separator"></div>
@@ -176,19 +221,19 @@ const HomePage: React.FC = () => {
 						<tbody>
 							{pastCalls.map((call) => (
 								<tr key={call.id}>
-									<td>#{call.id}</td>
-									<td>{call.date}</td>
-									<td>
+									<td data-label="Meeting #">#{call.id}</td>
+									<td data-label="Date">{call.date}</td>
+									<td data-label="Recording">
 										<a href={call.recordingLink} target="_blank" rel="noopener noreferrer">
 											Watch
 										</a>
 									</td>
-									<td>
+									<td data-label="Notes">
 										<a href={call.notesLink} target="_blank" rel="noopener noreferrer">
 											Notes
 										</a>
 									</td>
-									<td>
+									<td data-label="EIPs Discussed">
 										{call.eipsDiscussed.map((eip, index) => (
 											<Link
 												key={index}

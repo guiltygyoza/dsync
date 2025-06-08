@@ -139,12 +139,19 @@ h5 {
 	margin: 15px 0;
 }
 
+.countdown-boxes-container {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 10px;
+}
+
 .countdown-box {
 	background-color: var(--primary-color);
 	color: white;
 	border-radius: 8px;
 	padding: 15px;
-	margin: 0 10px;
 	text-align: center;
 	min-width: 80px;
 }
@@ -603,8 +610,26 @@ h5 {
 	text-decoration: underline;
 }
 
-/* Responsive Design */
+/* =================================== */
+/*           RESPONSIVE STYLES         */
+/* =================================== */
+
+@media (max-width: 992px) {
+	.call-cards,
+	.eip-cards {
+		grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+	}
+}
+
 @media (max-width: 768px) {
+	.home-container {
+		padding: 10px;
+	}
+
+	section {
+		padding: 15px;
+	}
+
 	.hero-section h1 {
 		font-size: 2.5rem;
 	}
@@ -613,17 +638,99 @@ h5 {
 		font-size: 1.5rem;
 	}
 
+	.calls-section h2 {
+		font-size: 1.8rem;
+	}
+
+	/* Stack countdown and floor button */
+	.countdown-floor-container {
+		flex-direction: column;
+	}
+
+	.vertical-separator {
+		display: none;
+	}
+
+	.enter-floor-container {
+		margin: 20px 0 0 0;
+	}
+
+	.next-call-countdown {
+		flex-direction: column;
+	}
+
+	.countdown-boxes-container {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+	}
+
+	.countdown-text {
+		margin-top: 20px;
+		margin-left: 0;
+	}
+
 	.call-cards,
 	.eip-cards {
 		grid-template-columns: 1fr;
 	}
 
+	/* Responsive Past Calls Table */
+	.past-calls-table {
+		border: none;
+		box-shadow: none;
+	}
+	.past-calls-table thead {
+		display: none;
+	}
+	.past-calls-table tr {
+		display: block;
+		margin-bottom: 20px;
+		border: 1px solid var(--border-color);
+		border-radius: 8px;
+		padding: 15px;
+		box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+	}
+	.past-calls-table td {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 10px 0;
+		border-bottom: 1px solid var(--border-color);
+		text-align: right;
+	}
+	.past-calls-table td:last-child {
+		border-bottom: none;
+	}
+	.past-calls-table td::before {
+		content: attr(data-label);
+		font-weight: bold;
+		text-align: left;
+		margin-right: 10px;
+		color: var(--primary-color);
+		white-space: nowrap;
+	}
+	.past-calls-table td .eip-link {
+		display: inline-block;
+		margin: 2px;
+	}
+
+	.section-header {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 10px;
+	}
+
 	.stats-container {
-		grid-template-columns: repeat(2, 1fr);
+		flex-direction: column;
+		align-items: center;
+		gap: 15px;
 	}
 
 	.community-links {
-		gap: 20px;
+		flex-direction: column;
+		align-items: center;
+		gap: 15px;
 	}
 }
 
@@ -631,22 +738,39 @@ h5 {
 	.hero-section h1 {
 		font-size: 2rem;
 	}
-
 	.hero-section h2 {
-		font-size: 1.2rem;
+		font-size: 1.3rem;
 	}
 
-	.next-call-countdown {
-		flex-direction: column;
-		gap: 10px;
+	.countdown-box {
+		padding: 10px;
+		min-width: 65px;
 	}
 
-	.countdown-text {
-		margin-left: 0;
-		margin-top: 10px;
+	.countdown-number {
+		font-size: 1.5rem;
+	}
+
+	.countdown-label {
+		font-size: 0.7rem;
 	}
 
 	.stats-container {
-		grid-template-columns: 1fr;
+		padding: 15px;
+	}
+
+	.past-calls-table td {
+		flex-direction: column;
+		align-items: flex-start;
+		text-align: left;
+	}
+
+	.past-calls-table td::before {
+		margin-bottom: 5px;
+	}
+
+	.past-calls-table td div {
+		text-align: left;
+		width: 100%;
 	}
 }

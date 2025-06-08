@@ -1,9 +1,11 @@
 import React, { useContext, useState, useEffect, useMemo, useRef, type TextareaHTMLAttributes, type FC } from "react";
-import { useParams, useLocation } from "react-router-dom";
+import { useParams, useLocation, useNavigate } from "react-router-dom";
 import Markdown from "react-markdown";
 import rehypeExternalLinks from "rehype-external-links";
-import { type IEIP, type IComment, EIP_STATUS } from "@dsync/types";
+import remarkGfm from "remark-gfm";
+import { type IEIP, type IComment, EIP_STATUS, SPECIAL_ID_FOR_EIP } from "@dsync/types";
 import { DBFINDER_ADDRESS, HeliaContext } from "../provider/HeliaProvider";
+import ScrollToTopButton from "../components/ScrollToTopButton";
 
 // Define AutogrowTextarea component
 interface AutogrowTextareaProps extends Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "value" | "onChange"> {
@@ -53,18 +55,20 @@ interface DocInterface {
 
 // Define interfaces based on usage to replace 'any' types for dbFinder and event entry
 interface MinimalDocDatabaseInterface {
-	iterator(options?: { limit?: number }): AsyncIterableIterator<DocInterface>;
+	iterator(options?: { amount?: number }): AsyncIterableIterator<DocInterface>;
 	events: {
-		on(eventName: string, callback: (entry: StoreEventEntry) => void): void;
-		off(eventName: string, callback?: (entry: StoreEventEntry) => void): void;
+		on(eventName: string, callback: (entry: DocEntryInterface) => void): void;
+		off(eventName: string, callback?: (entry: DocEntryInterface) => void): void;
 	};
 	close(): Promise<void> | void;
 	get(key: string): Promise<DocInterface | null>;
 }
 
-interface StoreEventEntry {
+interface DocEntryInterface {
 	payload: {
-		value: string; // Expecting JSON string of ICoreEIPInfo
+		key: string;
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		value: any;
 	};
 }
 
@@ -75,7 +79,7 @@ const CommentItem: React.FC<ICommentProps> = ({ comment, allComments, onReply, i
 	const handleReplySubmit = (e: React.FormEvent) => {
 		e.preventDefault();
 		if (replyText.trim()) {
-			onReply(comment.id, replyText);
+			onReply(comment._id, replyText);
 			setReplyText("");
 			setShowReplyForm(false);
 		}
@@ -83,15 +87,18 @@ const CommentItem: React.FC<ICommentProps> = ({ comment, allComments, onReply, i
 
 	// Find replies for the current comment
 	const replies = useMemo(() => {
-		return allComments.filter((c) => c.parentId === comment.id && c.eipId === currentEIPId);
-	}, [allComments, comment.id, currentEIPId]);
+		return allComments.filter((c) => c.parentId === comment._id && c.eipId === currentEIPId);
+	}, [allComments, comment._id, currentEIPId]);
 
 	return (
 		<div style={{ border: "1px solid #eee", padding: "10px", marginBottom: "10px" }}>
 			<p>
-				<strong>{comment.createdBy}</strong> ({new Date(comment.createdAt).toLocaleDateString()}):
+				<strong>{comment.createdBy}</strong> ({new Date(comment.createdAt).toLocaleTimeString()}):
 			</p>
-			<Markdown rehypePlugins={[[rehypeExternalLinks, { target: "_blank", rel: ["noopener", "noreferrer"] }]]}>
+			<Markdown
+				rehypePlugins={[[rehypeExternalLinks, { target: "_blank", rel: ["noopener", "noreferrer"] }]]}
+				remarkPlugins={[remarkGfm]}
+			>
 				{comment.content}
 			</Markdown>
 			{isEditable && (
@@ -131,6 +138,7 @@ const CommentItem: React.FC<ICommentProps> = ({ comment, allComments, onReply, i
 								rehypePlugins={[
 									[rehypeExternalLinks, { target: "_blank", rel: ["noopener", "noreferrer"] }],
 								]}
+								remarkPlugins={[remarkGfm]}
 							>
 								{replyText}
 							</Markdown>
@@ -148,7 +156,7 @@ const CommentItem: React.FC<ICommentProps> = ({ comment, allComments, onReply, i
 						// and set isEditable to false to prevent further nesting via UI.
 						// We also don't pass allComments down again for one-level replies.
 						<CommentItem
-							key={reply.id}
+							key={reply._id}
 							comment={reply}
 							allComments={[]}
 							onReply={() => {}}
@@ -162,12 +170,6 @@ const CommentItem: React.FC<ICommentProps> = ({ comment, allComments, onReply, i
 	);
 };
 
-const updateHandler = (entry: StoreEventEntry) => {
-	console.log("DB update event received:", entry);
-	// const newEip = JSON.parse(entry.payload.value) as IEIP;
-	// setEip(newEip);
-};
-
 const EIPPage: React.FC = () => {
 	const { eipId } = useParams<{ eipId: string }>();
 	const [eip, setEip] = useState<IEIP | null>(null);
@@ -179,16 +181,34 @@ const EIPPage: React.FC = () => {
 	const [isLoadingEip, setIsLoadingEip] = useState<boolean>(true);
 	const [dbError, setDbError] = useState<string | null>(null);
 
-	const { readOrbitDB: readOrbitdb } = useContext(HeliaContext);
+	const { readOrbitDB: readOrbitdb, writeOrbitDB: writeOrbitdb } = useContext(HeliaContext);
 	const location = useLocation();
+	const navigate = useNavigate();
 	const dbAddress = useRef<string | null>(null);
+	const commentDBAddress = useRef<string | null>(null);
 
 	const eipDBRef = useRef<MinimalDocDatabaseInterface | null>(null);
+	const commentDBRef = useRef<MinimalDocDatabaseInterface | null>(null);
+
+	const updateHandlerForEIPDB = async (entry: DocEntryInterface) => {
+		console.log("DB update event received:", entry);
+		if (entry.payload.key !== SPECIAL_ID_FOR_EIP) {
+			return;
+		}
+		const newEip = entry.payload.value as IEIP;
+		setEip(newEip);
+	};
+
+	const updateHandlerForCommentDB = async (entry: DocEntryInterface) => {
+		console.log("Comment DB update event received:", entry);
+		const newComment = JSON.parse(entry.payload.value) as IComment;
+		setComments((prevComments) => [...prevComments, newComment]);
+	};
 
 	useEffect(() => {
 		let isMounted = true;
 
-		const openAndLoadDatabase = async () => {
+		const openAndLoadEIPDatabase = async () => {
 			if (!readOrbitdb) {
 				if (isMounted) setIsLoadingEip(false);
 				return;
@@ -225,7 +245,7 @@ const EIPPage: React.FC = () => {
 						);
 						const dbFinder = await readOrbitdb.open(DBFINDER_ADDRESS);
 						try {
-							const eipAddressFromFinder = await dbFinder.get(`eip-${eipId}`);
+							const eipAddressFromFinder = await dbFinder.get(`${eipId}`);
 							if (eipAddressFromFinder && typeof eipAddressFromFinder === "string") {
 								determinedDbAddress = eipAddressFromFinder;
 								console.log(
@@ -256,7 +276,7 @@ const EIPPage: React.FC = () => {
 					}
 
 					console.log(`Opening the EIP database at: ${dbAddress.current}`);
-					const eipDoc = await readOrbitdb.open(dbAddress.current);
+					const eipDoc = await readOrbitdb.open(dbAddress.current, { type: "documents" });
 
 					if (!isMounted) {
 						if (eipDoc) eipDoc.close();
@@ -274,26 +294,17 @@ const EIPPage: React.FC = () => {
 						return;
 					}
 
-					eipDBRef.current.events.on("update", updateHandler);
+					eipDBRef.current.events.on("update", updateHandlerForEIPDB);
 
-					const fetchedEipData = await eipDBRef.current.get("special-id-for-eip");
-					console.log("fetchedEipData", fetchedEipData);
+					const fetchedEipData = await eipDBRef.current.get(SPECIAL_ID_FOR_EIP);
 					const eipContent = fetchedEipData?.value as IEIP;
-					const loadedComments: IComment[] = [];
-					for await (const record of eipDBRef.current.iterator({ limit: -1 })) {
-						if (record.key === "special-id-for-eip") {
-							continue;
-						} else {
-							const comment = record.value as IComment;
-							loadedComments.push(comment);
-						}
-					}
+					commentDBAddress.current = eipContent.commentDBAddress;
 
 					if (isMounted) {
 						console.log("Fetched EIP from DB:", eipContent);
-						console.log(`Fetched ${loadedComments.length} comments from DB`);
+						console.log("eipContent", eipContent);
 						setEip(eipContent);
-						setComments(loadedComments);
+						await openAndLoadCommentDatabase();
 					}
 				} catch (error) {
 					console.error("Error loading EIP from OrbitDB:", error);
@@ -308,15 +319,83 @@ const EIPPage: React.FC = () => {
 			}
 		};
 
-		openAndLoadDatabase();
+		const openAndLoadCommentDatabase = async () => {
+			console.log("openAndLoadCommentDatabase", commentDBAddress.current);
+			if (!readOrbitdb) {
+				if (isMounted) setIsLoadingEip(false);
+				return;
+			}
+
+			if (!commentDBRef.current) {
+				try {
+					if (isMounted) {
+						setIsLoadingEip(true);
+						setDbError(null);
+					}
+					if (!commentDBAddress.current) {
+						console.error("Comment DB address not found");
+						return;
+					}
+
+					console.log("opening comment db at", commentDBAddress.current);
+					const commentDoc = await readOrbitdb.open(commentDBAddress.current);
+
+					if (!isMounted) {
+						if (commentDoc) commentDoc.close();
+						return;
+					}
+					commentDBRef.current = commentDoc;
+
+					if (!commentDBRef.current) {
+						console.error("Failed to initialize commentDBRef.current after open.");
+						if (isMounted) {
+							setDbError("Failed to initialize database instance.");
+							setIsLoadingEip(false);
+						}
+						return;
+					}
+
+					commentDBRef.current.events.on("update", updateHandlerForCommentDB);
+
+					const loadedComments: IComment[] = [];
+					for await (const record of commentDBRef.current.iterator()) {
+						const comment = record.value as IComment;
+						loadedComments.push(comment);
+					}
+					if (isMounted) {
+						console.log("loadedComments", loadedComments);
+						console.log("Loaded comments from DB:", loadedComments.length);
+						setComments(loadedComments);
+					}
+				} catch (error) {
+					console.error("Error loading comments from OrbitDB:", error);
+					if (isMounted) {
+						setDbError(error instanceof Error ? error.message : "Unknown error loading comments");
+					}
+				} finally {
+					if (isMounted) {
+						setIsLoadingEip(false);
+					}
+				}
+			}
+		};
+
+		openAndLoadEIPDatabase();
 
 		return () => {
 			isMounted = false;
 			if (eipDBRef.current) {
 				console.log("Cleaning up EIP database listener and closing connection for address:", dbAddress.current);
-				eipDBRef.current.events.off("update", updateHandler);
 				eipDBRef.current.close();
 				eipDBRef.current = null;
+			}
+			if (commentDBRef.current) {
+				console.log(
+					"Cleaning up comment database listener and closing connection for address:",
+					commentDBAddress.current
+				);
+				commentDBRef.current.close();
+				commentDBRef.current = null;
 			}
 		};
 	}, [readOrbitdb, eipId, location.state?.dbAddress]);
@@ -327,37 +406,51 @@ const EIPPage: React.FC = () => {
 		}
 	}, [newCommentText, eipId]);
 
-	const handleAddComment = (e: React.FormEvent) => {
+	const handleAddComment = async (e: React.FormEvent) => {
 		e.preventDefault();
-		// TODO: add user identity to the comment and insert to db
-		if (!newCommentText.trim() || !eip) return;
+		await commentDBRef.current?.close();
+		const writeOrbitdbInstance = await writeOrbitdb();
+		console.log("writeOrbitdbInstance", writeOrbitdbInstance);
+		if (!newCommentText.trim() || !eip || !writeOrbitdbInstance) return;
 
-		const newComment: IComment = {
-			id: `comment-${Date.now()}`,
-			eipId: eip.id,
-			createdBy: "CurrentUser", // Replace with actual user
+		const commentDoc = await writeOrbitdbInstance.open(eip.commentDBAddress);
+		console.log("commentDoc", commentDoc);
+
+		const newComment = {
+			_id: `comment-${Date.now()}`,
+			eipId: eip._id,
+			createdBy: writeOrbitdbInstance.identity.id,
 			content: newCommentText,
-			createdAt: new Date(),
+			createdAt: new Date().toISOString(),
 			parentId: null,
 		};
-		setComments((prevComments) => [newComment, ...prevComments]);
+
+		console.log("newComment", newComment);
+		await commentDoc.put(newComment);
+		console.log("Successfully added comment to commentDB");
 		setNewCommentText("");
 		if (eipId) {
 			localStorage.removeItem(`draft-comment-${eipId}`);
 		}
+		await commentDoc.close();
 	};
 
-	const handleReplyToComment = (parentId: string, replyText: string) => {
+	const handleReplyToComment = async (parentId: string, replyText: string) => {
 		if (!eip) return;
-		const newReply: IComment = {
-			id: `reply-${parentId}-${Date.now()}`,
-			eipId: eip.id,
-			createdBy: "CurrentUser", // Replace with actual user
+		const writeOrbitdbInstance = await writeOrbitdb();
+		if (!writeOrbitdbInstance) return;
+		const commentDoc = await writeOrbitdbInstance.open(eip.commentDBAddress);
+		console.log("commentDoc", commentDoc);
+		const newReply = {
+			_id: `reply-${parentId}-${Date.now()}`,
+			eipId: eip._id,
+			createdBy: writeOrbitdbInstance.identity.id,
 			content: replyText,
-			createdAt: new Date(),
+			createdAt: new Date().toISOString(),
 			parentId: parentId,
 		};
-		setComments((prevComments) => [...prevComments, newReply]); // Add new reply to the flat list
+		await commentDoc.put(newReply);
+		await commentDoc.close();
 	};
 
 	// Moved these hooks before the early return
@@ -365,13 +458,25 @@ const EIPPage: React.FC = () => {
 	const topLevelComments = useMemo(() => comments.filter((c) => c.parentId === null), [comments]);
 
 	if (isLoadingEip) {
-		return <div>Loading EIP data... (eipId: {eipId})</div>;
+		return (
+			<div>
+				<button onClick={() => navigate(-1)} style={{ marginBottom: "10px", padding: "5px 10px" }}>
+					&larr; Back
+				</button>
+				<h3>Loading EIP data... (eipId: {eipId})</h3>
+			</div>
+		);
 	}
 
 	if (dbError) {
 		return (
 			<div>
-				Error loading EIP: {dbError} (eipId: {eipId})
+				<button onClick={() => navigate(-1)} style={{ marginBottom: "10px", padding: "5px 10px" }}>
+					&larr; Back
+				</button>
+				<h3>
+					Error loading EIP: {dbError} (eipId: {eipId})
+				</h3>
 			</div>
 		);
 	}
@@ -381,96 +486,109 @@ const EIPPage: React.FC = () => {
 	}
 
 	return (
-		<div>
-			<h1>{eip.title}</h1>
-			<p>
-				<strong>EIP Status:</strong> {eip.status}
-			</p>
-			<p>
-				<strong>EIP Category:</strong> {eip.category}
-			</p>
-			<p>
-				<strong>EIP Description:</strong> {eip.description}
-			</p>
-			<p>
-				<strong>Author(s):</strong> {eip.authors.join(", ")}
-			</p>
-			<p>
-				<strong>Created:</strong> {new Date(eip.createdAt).toLocaleString()}
-			</p>
-			<p>
-				<strong>Last Updated:</strong> {new Date(eip.updatedAt).toLocaleString()}
-			</p>
-			{eip.requires && eip.requires.length > 0 && (
+		<>
+			<ScrollToTopButton />
+			<div>
+				<button onClick={() => navigate(-1)} style={{ marginBottom: "10px", padding: "5px 10px" }}>
+					&larr; Back
+				</button>
+				<h1>{eip.title}</h1>
 				<p>
-					<strong>Requires:</strong> EIP-{eip.requires.join(", EIP-")}
+					<strong>EIP Status:</strong> {eip.status}
 				</p>
-			)}
-			<p>
-				<strong>Content:</strong>
-			</p>
-			<Markdown rehypePlugins={[[rehypeExternalLinks, { target: "_blank", rel: ["noopener", "noreferrer"] }]]}>
-				{eip.content}
-			</Markdown>
+				<p>
+					<strong>EIP Category:</strong> {eip.category}
+				</p>
+				<p>
+					<strong>EIP Description:</strong> {eip.description}
+				</p>
+				<p>
+					<strong>Author(s):</strong> {eip.authors.join(", ")}
+				</p>
+				<p>
+					<strong>Created:</strong> {new Date(eip.createdAt).toLocaleString()}
+				</p>
+				<p>
+					<strong>Last Updated:</strong> {new Date(eip.updatedAt).toLocaleString()}
+				</p>
+				{eip.requires && eip.requires.length > 0 && (
+					<p>
+						<strong>Requires:</strong> EIP-{eip.requires.join(", EIP-")}
+					</p>
+				)}
+				<p>
+					<strong>Content:</strong>
+				</p>
+				<Markdown
+					rehypePlugins={[[rehypeExternalLinks, { target: "_blank", rel: ["noopener", "noreferrer"] }]]}
+					remarkPlugins={[remarkGfm]}
+				>
+					{eip.content.replace(/^---[\s\S]*?---/, "").trim()}
+				</Markdown>
 
-			<hr style={{ margin: "20px 0" }} />
+				<hr style={{ margin: "20px 0" }} />
 
-			<h2>Comments</h2>
-			{editable && (
-				<form onSubmit={handleAddComment} style={{ marginBottom: "20px" }}>
-					<div style={{ marginBottom: "10px" }}>
-						<AutogrowTextarea
-							value={newCommentText}
-							onChange={(e) => setNewCommentText(e.target.value)}
-							placeholder="Write a comment (Markdown supported)..."
-							rows={4}
-							style={{ width: "100%", marginBottom: "5px" }}
-							required
-						/>
-						{newCommentText.trim() && (
-							<div
-								style={{
-									border: "1px dashed #ddd",
-									padding: "10px",
-									minHeight: "60px",
-									marginBottom: "10px",
-								}}
-							>
-								<p style={{ fontSize: "0.9em", color: "#555", marginTop: 0, marginBottom: "5px" }}>
-									<em>Preview:</em>
-								</p>
-								<Markdown
-									rehypePlugins={[
-										[rehypeExternalLinks, { target: "_blank", rel: ["noopener", "noreferrer"] }],
-									]}
+				<h2>Comments</h2>
+				{editable && (
+					<form onSubmit={handleAddComment} style={{ marginBottom: "20px" }}>
+						<div style={{ marginBottom: "10px" }}>
+							<AutogrowTextarea
+								value={newCommentText}
+								onChange={(e) => setNewCommentText(e.target.value)}
+								placeholder="Write a comment (Markdown supported)..."
+								rows={4}
+								style={{ width: "100%", marginBottom: "5px" }}
+								required
+							/>
+							{newCommentText.trim() && (
+								<div
+									style={{
+										border: "1px dashed #ddd",
+										padding: "10px",
+										minHeight: "60px",
+										marginBottom: "10px",
+									}}
 								>
-									{newCommentText}
-								</Markdown>
-							</div>
-						)}
-					</div>
-					<button type="submit" style={{ marginTop: "5px" }}>
-						Post Comment
-					</button>
-				</form>
-			)}
-			{!editable && (
-				<p>
-					<i>Commenting is disabled for this EIP chamber.</i>
-				</p>
-			)}
+									<p style={{ fontSize: "0.9em", color: "#555", marginTop: 0, marginBottom: "5px" }}>
+										<em>Preview:</em>
+									</p>
+									<Markdown
+										rehypePlugins={[
+											[
+												rehypeExternalLinks,
+												{ target: "_blank", rel: ["noopener", "noreferrer"] },
+											],
+										]}
+										remarkPlugins={[remarkGfm]}
+									>
+										{newCommentText}
+									</Markdown>
+								</div>
+							)}
+						</div>
+						<button type="submit" style={{ marginTop: "5px" }}>
+							Post Comment
+						</button>
+					</form>
+				)}
+				{!editable && (
+					<p>
+						<i>Commenting is disabled for this EIP chamber.</i>
+					</p>
+				)}
 
-			{topLevelComments.map((comment) => (
-				<CommentItem
-					key={comment.id}
-					comment={comment}
-					allComments={comments}
-					onReply={handleReplyToComment}
-					isEditable={editable}
-					currentEIPId={eip.id}
-				/>
-			))}
-		</div>
+				{topLevelComments.map((comment) => (
+					<CommentItem
+						key={comment._id}
+						comment={comment}
+						allComments={comments}
+						onReply={handleReplyToComment}
+						isEditable={editable}
+						currentEIPId={eip._id}
+					/>
+				))}
+			</div>
+		</>
 	);
 };
 
