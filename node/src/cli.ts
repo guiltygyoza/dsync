@@ -152,19 +152,24 @@ program
 program
 	.command("db-init")
 	.description(
-		"Initialize the database, make sure the eips.json file is in the same directory and the format is correct"
+		"Initialize the database, make sure the eips.json file is in the data folder at the root of the project"
 	)
 	.action(async () => {
 		const codeDir = path.dirname(fileURLToPath(import.meta.url));
-		const eipsPath = path.join(codeDir, "eips.json");
+		const eipsPath = path.join(codeDir, "..", "..", "data", "eips.json");
 		if (!fs.existsSync(eipsPath)) {
 			console.error(`eips.json file does not exist in ${eipsPath}`);
 			process.exit(1);
 		}
 		const eipsData = JSON.parse(fs.readFileSync(eipsPath, "utf8")) as EIPData[];
-		console.log(`Loaded ${eipsData.length} EIPs from ${eipsPath}`);
-		const eips: IEIP[] = eipsData.map((data) => {
-			return {
+		const eips: IEIP[] = [];
+		const ids = new Set<number>();
+		for (const data of eipsData) {
+			if (ids.has(data.number)) {
+				continue;
+			}
+			ids.add(data.number);
+			const eip = {
 				_id: data.number,
 				title: data.attributes.title || "",
 				description: data.attributes.description || "",
@@ -178,7 +183,10 @@ program
 				dbAddress: "",
 				commentDBAddress: "",
 			};
-		});
+			eips.push(eip);
+		}
+
+		console.log(`Loaded ${eips.length} EIPs from ${eipsPath}`);
 
 		console.log("Creating the DBFinder");
 		const { orbitdb, libp2p } = await startOrbitDB();
