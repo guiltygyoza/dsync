@@ -244,6 +244,7 @@ const EIPPage: React.FC = () => {
 							`EIP DB address not in state or localStorage for eipId ${eipId}, attempting to fetch from dbFinder.`
 						);
 						const dbFinder = await readOrbitdb.open(DBFINDER_ADDRESS);
+						await new Promise((resolve) => setTimeout(resolve, 2000));
 						try {
 							const eipAddressFromFinder = await dbFinder.get(`${eipId}`);
 							if (eipAddressFromFinder && typeof eipAddressFromFinder === "string") {
@@ -302,8 +303,6 @@ const EIPPage: React.FC = () => {
 					commentDBAddress.current = eipContent.commentDBAddress;
 
 					if (isMounted) {
-						console.log("Fetched EIP from DB:", eipContent);
-						console.log("eipContent", eipContent);
 						setEip(eipContent);
 						await openAndLoadCommentDatabase();
 					}
@@ -321,7 +320,6 @@ const EIPPage: React.FC = () => {
 		};
 
 		const openAndLoadCommentDatabase = async () => {
-			console.log("openAndLoadCommentDatabase", commentDBAddress.current);
 			if (!readOrbitdb) {
 				if (isMounted) setIsLoadingEip(false);
 				return;
@@ -355,6 +353,8 @@ const EIPPage: React.FC = () => {
 						}
 						return;
 					}
+
+					await new Promise((resolve) => setTimeout(resolve, 2000));
 
 					commentDBRef.current.events.on("update", updateHandlerForCommentDB);
 
@@ -409,10 +409,15 @@ const EIPPage: React.FC = () => {
 
 	const handleAddComment = async (e: React.FormEvent) => {
 		e.preventDefault();
+		if (!newCommentText.trim() || !eip) return;
 		await commentDBRef.current?.close();
 		const writeOrbitdbInstance = await writeOrbitdb();
 		console.log("writeOrbitdbInstance", writeOrbitdbInstance);
-		if (!newCommentText.trim() || !eip || !writeOrbitdbInstance) return;
+		if (!writeOrbitdbInstance) {
+			console.error("writeOrbitdbInstance is null");
+			return;
+		}
+		await new Promise((resolve) => setTimeout(resolve, 2000));
 
 		const commentDoc = await writeOrbitdbInstance.open(eip.commentDBAddress);
 		console.log("commentDoc", commentDoc);
@@ -427,19 +432,22 @@ const EIPPage: React.FC = () => {
 		};
 
 		console.log("newComment", newComment);
-		await commentDoc.put(newComment);
+		const hash = await commentDoc.put(newComment);
+		console.log("hash", hash);
 		console.log("Successfully added comment to commentDB");
 		setNewCommentText("");
 		if (eipId) {
 			localStorage.removeItem(`draft-comment-${eipId}`);
 		}
 		await commentDoc.close();
+		await writeOrbitdbInstance.stop();
 	};
 
 	const handleReplyToComment = async (parentId: string, replyText: string) => {
 		if (!eip) return;
 		const writeOrbitdbInstance = await writeOrbitdb();
 		if (!writeOrbitdbInstance) return;
+		await new Promise((resolve) => setTimeout(resolve, 2000));
 		const commentDoc = await writeOrbitdbInstance.open(eip.commentDBAddress);
 		console.log("commentDoc", commentDoc);
 		const newReply = {
@@ -452,6 +460,7 @@ const EIPPage: React.FC = () => {
 		};
 		await commentDoc.put(newReply);
 		await commentDoc.close();
+		await writeOrbitdbInstance.stop();
 	};
 
 	// Moved these hooks before the early return
