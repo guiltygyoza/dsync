@@ -296,6 +296,8 @@ const EIPPage: React.FC = () => {
 
 					eipDBRef.current.events.on("update", updateHandlerForEIPDB);
 
+					await new Promise((resolve) => setTimeout(resolve, 2000));
+
 					const fetchedEipData = await eipDBRef.current.get(SPECIAL_ID_FOR_EIP);
 					const eipContent = fetchedEipData?.value as IEIP;
 					commentDBAddress.current = eipContent.commentDBAddress;
