@@ -24,8 +24,7 @@ import * as filters from "@libp2p/websockets/filters";
 import { identify, identifyPush } from "@libp2p/identify";
 import { autoNAT } from "@libp2p/autonat";
 import { kadDHT } from "@libp2p/kad-dht";
-import { devToolsMetrics } from "@libp2p/devtools-metrics";
-// import { peerIdFromString } from "@libp2p/peer-id";
+import { peerIdFromString } from "@libp2p/peer-id";
 // import { tcp } from "@libp2p/tcp";
 import { LevelBlockstore } from "blockstore-level";
 
@@ -45,7 +44,7 @@ export const bootstrapConfig = {
 };
 
 // export const DBFINDER_ADDRESS = "/orbitdb/zdpuAwHvrRnh7PzhE89FUUM2eMrdpwGs8SRPS41JYiSLGoY8u";
-export const DBFINDER_ADDRESS = "/orbitdb/zdpuB3UkDspkByNMW7nCzmmYGMFgjM7UWLRosgGPJB6KdeTTV";
+export const DBFINDER_ADDRESS = "/orbitdb/zdpuAzSJGmvgrBdzvNeMPdjfA756R54QgebHMF5o8p6V1ckSk";
 
 //// Based on the structure returned by OrbitDBIdentityProviderEthereum
 //type OrbitDBIdentityInstance = () => Promise<{
@@ -76,17 +75,17 @@ const createWalletFacade = (address: string, signMessageAsync: (args: { message:
 });
 
 const setupLibp2p = async (): Promise<Libp2p<DefaultLibp2pServices>> => {
+	// @ts-expect-error -- .
 	return await createLibp2p<DefaultLibp2pServices>({
 		addresses: { listen: ["/p2p-circuit", "/webrtc", "/webrtc-direct"] },
 		peerDiscovery: [bootstrap(bootstrapConfig)],
 		connectionEncrypters: [noise()],
 		connectionGater: { denyDialMultiaddr: () => false },
-		metrics: devToolsMetrics(),
 		streamMuxers: [yamux()],
 		// @ts-expect-error -- .
 		services: {
 			dht: kadDHT({
-				clientMode: true,
+				// clientMode: true,
 			}),
 			ping: ping(),
 			dcutr: dcutr(),
@@ -173,6 +172,14 @@ export const HeliaProvider = ({ children }: { children: React.ReactNode }) => {
 		try {
 			const libp2p = await setupLibp2p();
 			const helia = await createHelia({ libp2p, blockstore: readBlockstore, routers: [libp2pRouting(libp2p)] });
+			await new Promise((resolve) => setTimeout(resolve, 2000));
+			const peerId = peerIdFromString("12D3KooW9ytqFZdCap4t331g5a9VtvhMhbYhoE5CFu8zcVc8Adg1");
+			const peer = await libp2p.peerStore.get(peerId);
+			console.log("peer", peer);
+			console.log("protocols", peer.protocols);
+			console.log("tags", peer.tags);
+			console.log("protocols", libp2p.getProtocols());
+			console.log("multiaddrs", libp2p.getMultiaddrs());
 			const readOrbitdb = await createOrbitDB({
 				ipfs: helia,
 				blockstore: readBlockstore,

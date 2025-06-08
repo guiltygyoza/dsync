@@ -254,6 +254,23 @@ program
 		});
 		const dbFinderAddress = DBFinder.address.toString();
 
+		for await (const record of DBFinder.iterator()) {
+			const eipInfo = JSON.parse(record.value);
+			const eipDoc = await orbitdb.open(eipInfo.dbAddress, { type: "documents" });
+			const eip = await eipDoc.get("special-id-for-eip");
+			await orbitdb.open(eip.value.commentDBAddress, { type: "documents" });
+		}
+
+		// for await (const record of DBFinder.iterator()) {
+		// 	await DBFinder.del(record.key);
+		// }
+
+		// const all = await DBFinder.all();
+		// for (const record of all) {
+		// 	console.log("Record:", record.value);
+		// 	orbitdb.open(record);
+		// }
+
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		DBFinder.events.on("update", async (entry: any) => {
 			console.log("DBFinder update:", entry.payload.value);
