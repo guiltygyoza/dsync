@@ -90,8 +90,8 @@ const setupLibp2p = async (): Promise<Libp2p<DefaultLibp2pServices>> => {
 			}),
 			ping: ping(),
 			dcutr: dcutr(),
-			identify: identify({ maxMessageSize: Infinity }),
-			identifyPush: identifyPush({ maxMessageSize: Infinity }),
+			identify: identify({ maxMessageSize: 2_000_000_000 }),
+			identifyPush: identifyPush({ maxMessageSize: 2_000_000_000 }),
 			pubsub: gossipsub({
 				allowPublishToZeroTopicPeers: true,
 				fallbackToFloodsub: true,
