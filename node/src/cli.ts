@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-/// <reference types="node" />
 
 import { Command } from "commander";
 import { createHelia } from "helia";
@@ -11,7 +10,6 @@ import { yamux } from "@chainsafe/libp2p-yamux";
 import { LevelBlockstore } from "blockstore-level";
 import { autoTLS } from "@ipshipyard/libp2p-auto-tls";
 import { autoNAT } from "@libp2p/autonat";
-// import { bootstrap } from "@libp2p/bootstrap";
 import { circuitRelayTransport, circuitRelayServer } from "@libp2p/circuit-relay-v2";
 import { dcutr } from "@libp2p/dcutr";
 import { identify, identifyPush } from "@libp2p/identify";

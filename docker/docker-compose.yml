@@ -10,8 +10,19 @@ services:
             - ssl_data:/etc/resty-auto-ssl
         environment:
             FORCE_HTTPS: "true"
-            SITES: whydidyoustop.com=http://5.75.178.220:41597
+            SITES: whydidyoustop.com=http://node:9999
 
+    node-init:
+        container_name: node-init
+        image: dsync/node
+        restart: on-failure
+        ports:
+            - 9999:9999
+        volumes:
+            - ./node/orbitdb:/dsync/node/orbitdb
+            - ./node/datastore:/dsync/node/datastore
+            - ./node/ipfs:/dsync/node/ipfs
+        command: db-init
     node:
         container_name: node
         image: dsync/node
@@ -19,8 +30,13 @@ services:
         ports:
             - 9999:9999
         volumes:
-            - ./node:/app
-        command: run -w 9999 -k 123
+            - ./node/orbitdb:/dsync/node/orbitdb
+            - ./node/datastore:/dsync/node/datastore
+            - ./node/ipfs:/dsync/node/ipfs
+        depends_on:
+            node-init:
+                condition: service_completed_successfully
+        command: run -w 9999
 
 volumes:
     ssl_data:
