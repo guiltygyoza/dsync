@@ -2,7 +2,7 @@ import React, { useContext, useState, useEffect, useMemo, useRef, type TextareaH
 import { useParams, useLocation } from "react-router-dom";
 import Markdown from "react-markdown";
 import rehypeExternalLinks from "rehype-external-links";
-import { type IEIP, type IComment, EIP_STATUS } from "@dsync/types";
+import { type IEIP, type IComment, EIP_STATUS, SPECIAL_ID_FOR_EIP } from "@dsync/types";
 import { DBFINDER_ADDRESS, HeliaContext } from "../provider/HeliaProvider";
 
 // Define AutogrowTextarea component
@@ -53,7 +53,7 @@ interface DocInterface {
 
 // Define interfaces based on usage to replace 'any' types for dbFinder and event entry
 interface MinimalDocDatabaseInterface {
-	iterator(options?: { limit?: number }): AsyncIterableIterator<DocInterface>;
+	iterator(options?: { amount?: number }): AsyncIterableIterator<DocInterface>;
 	events: {
 		on(eventName: string, callback: (entry: DocEntryInterface) => void): void;
 		off(eventName: string, callback?: (entry: DocEntryInterface) => void): void;
@@ -269,7 +269,7 @@ const EIPPage: React.FC = () => {
 					}
 
 					console.log(`Opening the EIP database at: ${dbAddress.current}`);
-					const eipDoc = await readOrbitdb.open(dbAddress.current);
+					const eipDoc = await readOrbitdb.open(dbAddress.current, { type: "documents" });
 
 					if (!isMounted) {
 						if (eipDoc) eipDoc.close();
@@ -289,8 +289,7 @@ const EIPPage: React.FC = () => {
 
 					eipDBRef.current.events.on("update", updateHandlerForEIPDB);
 
-					const fetchedEipData = await eipDBRef.current.get("special-id-for-eip");
-					console.log("fetchedEipData", fetchedEipData);
+					const fetchedEipData = await eipDBRef.current.get(SPECIAL_ID_FOR_EIP);
 					const eipContent = fetchedEipData?.value as IEIP;
 					commentDBAddress.current = eipContent.commentDBAddress;
 
@@ -352,13 +351,9 @@ const EIPPage: React.FC = () => {
 					commentDBRef.current.events.on("update", updateHandlerForCommentDB);
 
 					const loadedComments: IComment[] = [];
-					for await (const record of commentDBRef.current.iterator({ limit: -1 })) {
-						if (record.key === "special-id-for-eip") {
-							continue;
-						} else {
-							const comment = record.value as IComment;
-							loadedComments.push(comment);
-						}
+					for await (const record of commentDBRef.current.iterator()) {
+						const comment = record.value as IComment;
+						loadedComments.push(comment);
 					}
 					if (isMounted) {
 						console.log("loadedComments", loadedComments);
@@ -502,7 +497,7 @@ const EIPPage: React.FC = () => {
 				<strong>Content:</strong>
 			</p>
 			<Markdown rehypePlugins={[[rehypeExternalLinks, { target: "_blank", rel: ["noopener", "noreferrer"] }]]}>
-				{eip.content}
+				{eip.content.replace(/^---[\s\S]*?---/, "").trim()}
 			</Markdown>
 
 			<hr style={{ margin: "20px 0" }} />
