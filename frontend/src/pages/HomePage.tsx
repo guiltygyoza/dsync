@@ -137,7 +137,11 @@ const HomePage: React.FC = () => {
 									<div className="countdown-boxes-container">
 										<div className="countdown-box">
 											<span className="countdown-number">{timeLeft.days}</span>
-											<span className="countdown-label">days</span>
+											{timeLeft.days === 1 ? (
+												<span className="countdown-label">day</span>
+											) : (
+												<span className="countdown-label">days</span>
+											)}
 										</div>
 										<div className="countdown-box">
 											<span className="countdown-number">{timeLeft.hours}</span>

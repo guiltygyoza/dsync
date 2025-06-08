@@ -294,9 +294,8 @@ const EIPPage: React.FC = () => {
 						return;
 					}
 
-					eipDBRef.current.events.on("update", updateHandlerForEIPDB);
-
 					await new Promise((resolve) => setTimeout(resolve, 2000));
+					eipDBRef.current.events.on("update", updateHandlerForEIPDB);
 
 					const fetchedEipData = await eipDBRef.current.get(SPECIAL_ID_FOR_EIP);
 					const eipContent = fetchedEipData?.value as IEIP;
