@@ -34,7 +34,7 @@ const Navbar: React.FC<NavbarProps> = ({ theme, toggleTheme }) => {
 					alignItems: "center",
 				}}
 			>
-				<img src="src/assets/eth-icon.png" alt="Ethereum" style={styles.ethIcon} />
+				<img src="/assets/generated-eth-congress-logo.png" alt="Ethereum Congress" style={styles.ethIcon} />
 				Ethereum Congress
 			</Link>
 			<div style={styles.walletAndThemeContainer}>
@@ -75,9 +75,10 @@ const styles: { [key: string]: React.CSSProperties } = {
 		marginLeft: "auto",
 	},
 	ethIcon: {
-		width: "24px",
-		height: "24px",
+		width: "32px",
+		height: "32px",
 		marginRight: "8px",
+		borderRadius: "4px",
 	},
 };
 
