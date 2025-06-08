@@ -5,6 +5,7 @@ import rehypeExternalLinks from "rehype-external-links";
 import remarkGfm from "remark-gfm";
 import { type IEIP, type IComment, EIP_STATUS, SPECIAL_ID_FOR_EIP } from "@dsync/types";
 import { DBFINDER_ADDRESS, HeliaContext } from "../provider/HeliaProvider";
+import ScrollToTopButton from "../components/ScrollToTopButton";
 
 // Define AutogrowTextarea component
 interface AutogrowTextareaProps extends Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "value" | "onChange"> {
@@ -92,7 +93,7 @@ const CommentItem: React.FC<ICommentProps> = ({ comment, allComments, onReply, i
 	return (
 		<div style={{ border: "1px solid #eee", padding: "10px", marginBottom: "10px" }}>
 			<p>
-				<strong>{comment.createdBy}</strong> ({new Date(comment.createdAt).toLocaleDateString()}):
+				<strong>{comment.createdBy}</strong> ({new Date(comment.createdAt).toLocaleTimeString()}):
 			</p>
 			<Markdown
 				rehypePlugins={[[rehypeExternalLinks, { target: "_blank", rel: ["noopener", "noreferrer"] }]]}
@@ -189,16 +190,16 @@ const EIPPage: React.FC = () => {
 	const eipDBRef = useRef<MinimalDocDatabaseInterface | null>(null);
 	const commentDBRef = useRef<MinimalDocDatabaseInterface | null>(null);
 
-	const updateHandlerForEIPDB = (entry: DocEntryInterface) => {
+	const updateHandlerForEIPDB = async (entry: DocEntryInterface) => {
 		console.log("DB update event received:", entry);
-		if (entry.payload.key !== "special-id-for-eip") {
+		if (entry.payload.key !== SPECIAL_ID_FOR_EIP) {
 			return;
 		}
 		const newEip = entry.payload.value as IEIP;
 		setEip(newEip);
 	};
 
-	const updateHandlerForCommentDB = (entry: DocEntryInterface) => {
+	const updateHandlerForCommentDB = async (entry: DocEntryInterface) => {
 		console.log("Comment DB update event received:", entry);
 		const newComment = JSON.parse(entry.payload.value) as IComment;
 		setComments((prevComments) => [...prevComments, newComment]);
@@ -385,7 +386,6 @@ const EIPPage: React.FC = () => {
 			isMounted = false;
 			if (eipDBRef.current) {
 				console.log("Cleaning up EIP database listener and closing connection for address:", dbAddress.current);
-				eipDBRef.current.events.off("update", updateHandlerForEIPDB);
 				eipDBRef.current.close();
 				eipDBRef.current = null;
 			}
@@ -394,7 +394,6 @@ const EIPPage: React.FC = () => {
 					"Cleaning up comment database listener and closing connection for address:",
 					commentDBAddress.current
 				);
-				commentDBRef.current.events.off("update", updateHandlerForCommentDB);
 				commentDBRef.current.close();
 				commentDBRef.current = null;
 			}
@@ -422,17 +421,18 @@ const EIPPage: React.FC = () => {
 			eipId: eip._id,
 			createdBy: writeOrbitdbInstance.identity.id,
 			content: newCommentText,
-			createdAt: new Date(),
+			createdAt: new Date().toISOString(),
 			parentId: null,
 		};
 
 		console.log("newComment", newComment);
 		await commentDoc.put(newComment);
-		// setComments((prevComments) => [newComment, ...prevComments]);
+		console.log("Successfully added comment to commentDB");
 		setNewCommentText("");
 		if (eipId) {
 			localStorage.removeItem(`draft-comment-${eipId}`);
 		}
+		await commentDoc.close();
 	};
 
 	const handleReplyToComment = async (parentId: string, replyText: string) => {
@@ -441,16 +441,16 @@ const EIPPage: React.FC = () => {
 		if (!writeOrbitdbInstance) return;
 		const commentDoc = await writeOrbitdbInstance.open(eip.commentDBAddress);
 		console.log("commentDoc", commentDoc);
-		const newReply: IComment = {
+		const newReply = {
 			_id: `reply-${parentId}-${Date.now()}`,
 			eipId: eip._id,
 			createdBy: writeOrbitdbInstance.identity.id,
 			content: replyText,
-			createdAt: new Date(),
+			createdAt: new Date().toISOString(),
 			parentId: parentId,
 		};
-		await commentDoc.put(newReply._id, newReply);
-		setComments((prevComments) => [newReply, ...prevComments]);
+		await commentDoc.put(newReply);
+		await commentDoc.close();
 	};
 
 	// Moved these hooks before the early return
@@ -486,103 +486,109 @@ const EIPPage: React.FC = () => {
 	}
 
 	return (
-		<div>
-			<button onClick={() => navigate(-1)} style={{ marginBottom: "10px", padding: "5px 10px" }}>
-				&larr; Back
-			</button>
-			<h1>{eip.title}</h1>
-			<p>
-				<strong>EIP Status:</strong> {eip.status}
-			</p>
-			<p>
-				<strong>EIP Category:</strong> {eip.category}
-			</p>
-			<p>
-				<strong>EIP Description:</strong> {eip.description}
-			</p>
-			<p>
-				<strong>Author(s):</strong> {eip.authors.join(", ")}
-			</p>
-			<p>
-				<strong>Created:</strong> {new Date(eip.createdAt).toLocaleString()}
-			</p>
-			<p>
-				<strong>Last Updated:</strong> {new Date(eip.updatedAt).toLocaleString()}
-			</p>
-			{eip.requires && eip.requires.length > 0 && (
+		<>
+			<ScrollToTopButton />
+			<div>
+				<button onClick={() => navigate(-1)} style={{ marginBottom: "10px", padding: "5px 10px" }}>
+					&larr; Back
+				</button>
+				<h1>{eip.title}</h1>
 				<p>
-					<strong>Requires:</strong> EIP-{eip.requires.join(", EIP-")}
+					<strong>EIP Status:</strong> {eip.status}
 				</p>
-			)}
-			<p>
-				<strong>Content:</strong>
-			</p>
-			<Markdown
-				rehypePlugins={[[rehypeExternalLinks, { target: "_blank", rel: ["noopener", "noreferrer"] }]]}
-				remarkPlugins={[remarkGfm]}
-			>
-				{eip.content.replace(/^---[\s\S]*?---/, "").trim()}
-			</Markdown>
+				<p>
+					<strong>EIP Category:</strong> {eip.category}
+				</p>
+				<p>
+					<strong>EIP Description:</strong> {eip.description}
+				</p>
+				<p>
+					<strong>Author(s):</strong> {eip.authors.join(", ")}
+				</p>
+				<p>
+					<strong>Created:</strong> {new Date(eip.createdAt).toLocaleString()}
+				</p>
+				<p>
+					<strong>Last Updated:</strong> {new Date(eip.updatedAt).toLocaleString()}
+				</p>
+				{eip.requires && eip.requires.length > 0 && (
+					<p>
+						<strong>Requires:</strong> EIP-{eip.requires.join(", EIP-")}
+					</p>
+				)}
+				<p>
+					<strong>Content:</strong>
+				</p>
+				<Markdown
+					rehypePlugins={[[rehypeExternalLinks, { target: "_blank", rel: ["noopener", "noreferrer"] }]]}
+					remarkPlugins={[remarkGfm]}
+				>
+					{eip.content.replace(/^---[\s\S]*?---/, "").trim()}
+				</Markdown>
 
-			<hr style={{ margin: "20px 0" }} />
+				<hr style={{ margin: "20px 0" }} />
 
-			<h2>Comments</h2>
-			{editable && (
-				<form onSubmit={handleAddComment} style={{ marginBottom: "20px" }}>
-					<div style={{ marginBottom: "10px" }}>
-						<AutogrowTextarea
-							value={newCommentText}
-							onChange={(e) => setNewCommentText(e.target.value)}
-							placeholder="Write a comment (Markdown supported)..."
-							rows={4}
-							style={{ width: "100%", marginBottom: "5px" }}
-							required
-						/>
-						{newCommentText.trim() && (
-							<div
-								style={{
-									border: "1px dashed #ddd",
-									padding: "10px",
-									minHeight: "60px",
-									marginBottom: "10px",
-								}}
-							>
-								<p style={{ fontSize: "0.9em", color: "#555", marginTop: 0, marginBottom: "5px" }}>
-									<em>Preview:</em>
-								</p>
-								<Markdown
-									rehypePlugins={[
-										[rehypeExternalLinks, { target: "_blank", rel: ["noopener", "noreferrer"] }],
-									]}
-									remarkPlugins={[remarkGfm]}
+				<h2>Comments</h2>
+				{editable && (
+					<form onSubmit={handleAddComment} style={{ marginBottom: "20px" }}>
+						<div style={{ marginBottom: "10px" }}>
+							<AutogrowTextarea
+								value={newCommentText}
+								onChange={(e) => setNewCommentText(e.target.value)}
+								placeholder="Write a comment (Markdown supported)..."
+								rows={4}
+								style={{ width: "100%", marginBottom: "5px" }}
+								required
+							/>
+							{newCommentText.trim() && (
+								<div
+									style={{
+										border: "1px dashed #ddd",
+										padding: "10px",
+										minHeight: "60px",
+										marginBottom: "10px",
+									}}
 								>
-									{newCommentText}
-								</Markdown>
-							</div>
-						)}
-					</div>
-					<button type="submit" style={{ marginTop: "5px" }}>
-						Post Comment
-					</button>
-				</form>
-			)}
-			{!editable && (
-				<p>
-					<i>Commenting is disabled for this EIP chamber.</i>
-				</p>
-			)}
+									<p style={{ fontSize: "0.9em", color: "#555", marginTop: 0, marginBottom: "5px" }}>
+										<em>Preview:</em>
+									</p>
+									<Markdown
+										rehypePlugins={[
+											[
+												rehypeExternalLinks,
+												{ target: "_blank", rel: ["noopener", "noreferrer"] },
+											],
+										]}
+										remarkPlugins={[remarkGfm]}
+									>
+										{newCommentText}
+									</Markdown>
+								</div>
+							)}
+						</div>
+						<button type="submit" style={{ marginTop: "5px" }}>
+							Post Comment
+						</button>
+					</form>
+				)}
+				{!editable && (
+					<p>
+						<i>Commenting is disabled for this EIP chamber.</i>
+					</p>
+				)}
 
-			{topLevelComments.map((comment) => (
-				<CommentItem
-					key={comment._id}
-					comment={comment}
-					allComments={comments}
-					onReply={handleReplyToComment}
-					isEditable={editable}
-					currentEIPId={eip._id}
-				/>
-			))}
-		</div>
+				{topLevelComments.map((comment) => (
+					<CommentItem
+						key={comment._id}
+						comment={comment}
+						allComments={comments}
+						onReply={handleReplyToComment}
+						isEditable={editable}
+						currentEIPId={eip._id}
+					/>
+				))}
+			</div>
+		</>
 	);
 };
 
