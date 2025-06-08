@@ -40,6 +40,9 @@ contract EIPManager {
 
     /// @notice Mapping to store EIP data, keyed by EIP number
     mapping(uint => EIP) public eips;
+    
+    /// @notice Array of all EIP IDs for enumeration
+    uint[] public allEipIds;
 
     // ===============
     // Events
@@ -78,7 +81,33 @@ contract EIPManager {
         
         emit NewEIPEditorInaugurated(oldEditor, newEditor);
     }
-
+    
+    /// @notice Returns the total number of EIPs in the contract
+    /// @return The total count of EIPs
+    function getTotalEIPCount() external view returns (uint) {
+        return allEipIds.length;
+    }
+    
+    /// @notice Returns a paginated list of EIP IDs
+    /// @param offset The starting index
+    /// @param limit The maximum number of IDs to return
+    /// @return A list of EIP IDs
+    function getEIPIds(uint offset, uint limit) external view returns (uint[] memory) {
+        uint endIndex = offset + limit;
+        if (endIndex > allEipIds.length) {
+            endIndex = allEipIds.length;
+        }
+        
+        uint resultLength = endIndex - offset;
+        uint[] memory result = new uint[](resultLength);
+        
+        for (uint i = 0; i < resultLength; i++) {
+            result[i] = allEipIds[offset + i];
+        }
+        
+        return result;
+    }
+    
     /// @notice Registers a new EIP with the provided ID and authors
     /// @param eipId The unique EIP number
     /// @param _authors Array of addresses for the EIP authors
@@ -96,7 +125,53 @@ contract EIPManager {
             lastUpdateDate: block.timestamp
         });
         
+        // Add to the list of all EIP IDs
+        allEipIds.push(eipId);
+        
         emit NewEIPRegistered(eipId, _authors, msg.sender);
+    }
+    
+    /// @notice Registers multiple EIPs at once from a batch of data
+    /// @param eipIds Array of unique EIP numbers
+    /// @param authorsList Array of arrays containing author addresses for each EIP
+    /// @param statuses Array of EIPStatus values for each EIP
+    /// @dev This function allows batch registration of EIPs from the eips.json data
+    /// @dev The arrays must be of the same length and indexes must correspond to the same EIP
+    function registerEIPBatch(
+        uint[] calldata eipIds,
+        address[][] calldata authorsList,
+        EIPStatus[] calldata statuses
+    ) external {
+        require(msg.sender == eipEditor, "Only the EIP Editor can register new EIPs");
+        require(eipIds.length == authorsList.length, "Input arrays must have the same length");
+        require(eipIds.length == statuses.length, "Input arrays must have the same length");
+        
+        for (uint i = 0; i < eipIds.length; i++) {
+            uint eipId = eipIds[i];
+            address[] calldata authors = authorsList[i];
+            EIPStatus status = statuses[i];
+            
+            // Skip if EIP already exists
+            if (eips[eipId].creationDate != 0) {
+                continue;
+            }
+            
+            require(authors.length > 0, "At least one author must be specified for each EIP");
+            
+            // Initialize the EIP with the provided status
+            eips[eipId] = EIP({
+                eipId: eipId,
+                authors: authors,
+                status: status,
+                creationDate: block.timestamp,
+                lastUpdateDate: block.timestamp
+            });
+            
+            // Add to the list of all EIP IDs
+            allEipIds.push(eipId);
+            
+            emit NewEIPRegistered(eipId, authors, msg.sender);
+        }
     }
 
     /// @notice Changes the status of an existing EIP
