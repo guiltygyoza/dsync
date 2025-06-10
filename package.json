@@ -15,7 +15,7 @@
 	"workspaces": [
 		"node",
 		"frontend",
-		"services"
+		"packages/*"
 	],
 	"devDependencies": {
 		"@eslint/js": "9.27.0",

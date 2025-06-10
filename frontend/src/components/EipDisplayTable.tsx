@@ -121,6 +121,8 @@ const EipDisplayTable: React.FC = () => {
 						return;
 					}
 
+					await new Promise((resolve) => setTimeout(resolve, 2000));
+
 					// Attach event listener for updates
 					dbFinderRef.current.events.on("update", updateHandler);
 

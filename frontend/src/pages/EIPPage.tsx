@@ -201,7 +201,7 @@ const EIPPage: React.FC = () => {
 
 	const updateHandlerForCommentDB = async (entry: DocEntryInterface) => {
 		console.log("Comment DB update event received:", entry);
-		const newComment = JSON.parse(entry.payload.value) as IComment;
+		const newComment = entry.payload.value as IComment;
 		setComments((prevComments) => [...prevComments, newComment]);
 	};
 
@@ -244,6 +244,7 @@ const EIPPage: React.FC = () => {
 							`EIP DB address not in state or localStorage for eipId ${eipId}, attempting to fetch from dbFinder.`
 						);
 						const dbFinder = await readOrbitdb.open(DBFINDER_ADDRESS);
+						await new Promise((resolve) => setTimeout(resolve, 2000));
 						try {
 							const eipAddressFromFinder = await dbFinder.get(`${eipId}`);
 							if (eipAddressFromFinder && typeof eipAddressFromFinder === "string") {
@@ -294,6 +295,7 @@ const EIPPage: React.FC = () => {
 						return;
 					}
 
+					await new Promise((resolve) => setTimeout(resolve, 2000));
 					eipDBRef.current.events.on("update", updateHandlerForEIPDB);
 
 					const fetchedEipData = await eipDBRef.current.get(SPECIAL_ID_FOR_EIP);
@@ -301,8 +303,6 @@ const EIPPage: React.FC = () => {
 					commentDBAddress.current = eipContent.commentDBAddress;
 
 					if (isMounted) {
-						console.log("Fetched EIP from DB:", eipContent);
-						console.log("eipContent", eipContent);
 						setEip(eipContent);
 						await openAndLoadCommentDatabase();
 					}
@@ -320,7 +320,6 @@ const EIPPage: React.FC = () => {
 		};
 
 		const openAndLoadCommentDatabase = async () => {
-			console.log("openAndLoadCommentDatabase", commentDBAddress.current);
 			if (!readOrbitdb) {
 				if (isMounted) setIsLoadingEip(false);
 				return;
@@ -354,6 +353,8 @@ const EIPPage: React.FC = () => {
 						}
 						return;
 					}
+
+					await new Promise((resolve) => setTimeout(resolve, 2000));
 
 					commentDBRef.current.events.on("update", updateHandlerForCommentDB);
 
@@ -406,15 +407,31 @@ const EIPPage: React.FC = () => {
 		}
 	}, [newCommentText, eipId]);
 
+	const refreshComments = async () => {
+		if (!commentDBRef.current) return;
+		const loadedComments: IComment[] = [];
+		for await (const record of commentDBRef.current.iterator()) {
+			const comment = record.value as IComment;
+			loadedComments.push(comment);
+		}
+		setComments(loadedComments);
+	};
+
 	const handleAddComment = async (e: React.FormEvent) => {
 		e.preventDefault();
+		if (!newCommentText.trim() || !eip) return;
 		await commentDBRef.current?.close();
 		const writeOrbitdbInstance = await writeOrbitdb();
 		console.log("writeOrbitdbInstance", writeOrbitdbInstance);
-		if (!newCommentText.trim() || !eip || !writeOrbitdbInstance) return;
+		if (!writeOrbitdbInstance) {
+			console.error("writeOrbitdbInstance is null");
+			return;
+		}
+		await new Promise((resolve) => setTimeout(resolve, 2000));
 
 		const commentDoc = await writeOrbitdbInstance.open(eip.commentDBAddress);
 		console.log("commentDoc", commentDoc);
+		await new Promise((resolve) => setTimeout(resolve, 2000));
 
 		const newComment = {
 			_id: `comment-${Date.now()}`,
@@ -433,12 +450,19 @@ const EIPPage: React.FC = () => {
 			localStorage.removeItem(`draft-comment-${eipId}`);
 		}
 		await commentDoc.close();
+		commentDBRef.current = await readOrbitdb.open(commentDBAddress.current, { type: "documents" });
+		if (commentDBRef.current) {
+			commentDBRef.current.events.on("update", updateHandlerForCommentDB);
+			refreshComments();
+		}
 	};
 
 	const handleReplyToComment = async (parentId: string, replyText: string) => {
 		if (!eip) return;
+		await commentDBRef.current?.close();
 		const writeOrbitdbInstance = await writeOrbitdb();
 		if (!writeOrbitdbInstance) return;
+		await new Promise((resolve) => setTimeout(resolve, 2000));
 		const commentDoc = await writeOrbitdbInstance.open(eip.commentDBAddress);
 		console.log("commentDoc", commentDoc);
 		const newReply = {
@@ -451,6 +475,11 @@ const EIPPage: React.FC = () => {
 		};
 		await commentDoc.put(newReply);
 		await commentDoc.close();
+		commentDBRef.current = await readOrbitdb.open(commentDBAddress.current, { type: "documents" });
+		if (commentDBRef.current) {
+			commentDBRef.current.events.on("update", updateHandlerForCommentDB);
+			refreshComments();
+		}
 	};
 
 	// Moved these hooks before the early return
