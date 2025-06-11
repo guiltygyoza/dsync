@@ -110,7 +110,7 @@ const HomePage: React.FC = () => {
 			<section className="hero-section">
 				<div className="hero-content">
 					<img
-						src="/assets/generated-eth-congress-logo.png"
+						src="/src/assets/generated-eth-congress-logo.png"
 						alt="Ethereum Congress Logo"
 						className="congress-logo"
 					/>
